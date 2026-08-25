@@ -38,6 +38,10 @@ outflow can remain translucent without making the disk or merger disappear.
 Density, temperature, and speed remain continuous weights across the measured
 stellar regimes; they do not plateau to a categorical value over most cells.
 The cylindrical and polar geometry terms are broad tapers only.
+Within each layer, density also modulates color: diffuse disk gas starts deep
+red and rises through gold, while diffuse polar gas starts deep blue and moves
+toward pale cobalt at higher density. This preserves structure without adding
+teal or pink categorical palettes.
 
 ## Shot classes
 

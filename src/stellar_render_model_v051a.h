@@ -188,13 +188,21 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
 
   float blackbody[3];
   stellarTemperatureColor(log_temperature, blackbody);
-  const float disk_tint[3] = {1.00f, 0.55f, 0.08f};
-  const float polar_tint[3] = {0.08f, 0.18f, 0.80f};
+  const float disk_low_density[3] = {0.40f, 0.045f, 0.006f};
+  const float disk_high_density[3] = {1.00f, 0.73f, 0.20f};
+  const float polar_low_density[3] = {0.015f, 0.025f, 0.12f};
+  const float polar_high_density[3] = {0.32f, 0.48f, 1.00f};
+  const float disk_color_fraction = stellarSmoothstep(0.20f, 1.85f, log_density);
+  const float polar_color_fraction = stellarSmoothstep(-3.0f, -0.70f, log_density);
   float disk_color[3];
   float polar_color[3];
   for(int channel = 0; channel < 3; channel++) {
-    disk_color[channel] = 0.80f * blackbody[channel] + 0.20f * disk_tint[channel];
-    polar_color[channel] = 0.25f * blackbody[channel] + 0.75f * polar_tint[channel];
+    const float disk_density_color = disk_low_density[channel] +
+        disk_color_fraction * (disk_high_density[channel] - disk_low_density[channel]);
+    const float polar_density_color = polar_low_density[channel] +
+        polar_color_fraction * (polar_high_density[channel] - polar_low_density[channel]);
+    disk_color[channel] = 0.35f * blackbody[channel] + 0.65f * disk_density_color;
+    polar_color[channel] = 0.15f * blackbody[channel] + 0.85f * polar_density_color;
   }
   float merger_mix = 0.0f;
   float disk_mix = 0.0f;

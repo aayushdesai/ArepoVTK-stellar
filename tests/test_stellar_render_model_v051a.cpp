@@ -41,6 +41,11 @@ int main()
       rotating_velocity);
   assert(disk.extinction_per_cm > 0.0f);
   assert(disk.color[0] > disk.color[1] && disk.color[1] > disk.color[2]);
+  const StellarOpticalSample lower_density_disk = evaluateStellarOpticalSample(
+      parameters(STELLAR_TRANSFER_DISK), disk_position, 10.45f, 2.5e7f,
+      rotating_velocity);
+  assert(lower_density_disk.extinction_per_cm > 0.0f);
+  assert(std::abs(lower_density_disk.color[0] - disk.color[0]) > 0.05f);
   const StellarOpticalSample rejected_radial_disk = evaluateStellarOpticalSample(
       parameters(STELLAR_TRANSFER_DISK), disk_position, 11.0f, 2.5e7f,
       radial_velocity);
@@ -52,6 +57,11 @@ int main()
   assert(polar.extinction_per_cm > 0.0f);
   assert(polar.color[2] > polar.color[0]);
   assert(std::abs(polar.color[0] - polar.color[1]) < 0.15f);
+  const StellarOpticalSample denser_polar = evaluateStellarOpticalSample(
+      parameters(STELLAR_TRANSFER_OUTFLOW), polar_position, 8.8f, 5.0e6f,
+      outward_velocity);
+  assert(denser_polar.extinction_per_cm > polar.extinction_per_cm);
+  assert(denser_polar.color[2] > polar.color[2]);
   const StellarOpticalSample rejected_inflow = evaluateStellarOpticalSample(
       parameters(STELLAR_TRANSFER_OUTFLOW), polar_position, 8.0f, 5.0e6f,
       inward_velocity);
