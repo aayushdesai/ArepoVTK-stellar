@@ -28,6 +28,9 @@ struct StellarTransferParameters {
   float polar_inner_cm;
   float polar_outer_cm;
   float polar_cone_ratio;
+  float merger_extinction_per_cm;
+  float disk_extinction_per_cm;
+  float polar_extinction_per_cm;
 };
 
 struct StellarOpticalSample {
@@ -169,13 +172,13 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
       absolute_height) *
       (1.0f - stellarSmoothstep(0.90f * parameters.polar_outer_cm,
                                1.08f * parameters.polar_outer_cm, absolute_height));
-  const float polar_density = stellarSmoothstep(-3.7f, -2.75f, log_density) *
-      (1.0f - stellarSmoothstep(-0.15f, 0.65f, log_density));
+  const float polar_density = stellarSmoothstep(-3.25f, -2.65f, log_density) *
+      (1.0f - stellarSmoothstep(-0.45f, 0.25f, log_density));
   const float polar_temperature = stellarSmoothstep(5.95f, 6.35f, log_temperature) *
       (1.0f - stellarSmoothstep(7.45f, 7.85f, log_temperature));
-  const float polar_speed = stellarSmoothstep(5.0e7f, 1.5e8f,
+  const float polar_speed = stellarSmoothstep(1.0e8f, 2.0e8f,
                                                outward_axial_velocity);
-  const float polar_coherence = stellarSmoothstep(0.42f, 0.72f,
+  const float polar_coherence = stellarSmoothstep(0.55f, 0.80f,
                                                    outward_axial_fraction);
   const float polar_weight = axial_shape * polar_height * polar_density *
       polar_temperature * polar_speed * polar_coherence;
@@ -211,8 +214,10 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
   for(int channel = 0; channel < 3; channel++)
     output.color[channel] = (merger_mix * blackbody[channel] +
         disk_mix * disk_color[channel] + polar_mix * polar_color[channel]) / total;
-  output.extinction_per_cm = merger_mix * 5.0e-11f +
-      disk_mix * 4.0e-11f + polar_mix * 8.0e-12f;
+  output.extinction_per_cm =
+      merger_mix * parameters.merger_extinction_per_cm +
+      disk_mix * parameters.disk_extinction_per_cm +
+      polar_mix * parameters.polar_extinction_per_cm;
   return output;
 }
 

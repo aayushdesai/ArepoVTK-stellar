@@ -124,6 +124,9 @@ void ConfigSet::ReadFile(string cfgfile)
   stellarPolarInner = readValue<float>("stellarPolarInner", 5.0e9f);
   stellarPolarOuter = readValue<float>("stellarPolarOuter", 5.0e11f);
   stellarPolarConeRatio = readValue<float>("stellarPolarConeRatio", 0.7f);
+  stellarMergerOpacity = readValue<float>("stellarMergerOpacity", 3.0e-11f);
+  stellarDiskOpacity = readValue<float>("stellarDiskOpacity", 1.5e-11f);
+  stellarPolarOpacity = readValue<float>("stellarPolarOpacity", 1.2e-12f);
   stellarExposure = readValue<float>("stellarExposure", 1.4f);
   stellarBlackPoint = readValue<float>("stellarBlackPoint", 0.002f);
   stellarSaturation = readValue<float>("stellarSaturation", 0.82f);
@@ -183,6 +186,8 @@ void ConfigSet::ReadFile(string cfgfile)
         !(stellarDiskRadius > 0.0f) ||
         !(stellarDiskHalfThickness > 0.0f) || !(stellarPolarInner > 0.0f) ||
         !(stellarPolarOuter > stellarPolarInner) || !(stellarPolarConeRatio > 0.0f) ||
+        !(stellarMergerOpacity > 0.0f) || !(stellarDiskOpacity > 0.0f) ||
+        !(stellarPolarOpacity > 0.0f) ||
         !(stellarExposure > 0.0f) || stellarBlackPoint < 0.0f ||
         stellarSaturation < 0.0f)
       terminate("Config: invalid stellar transfer or display parameter.");

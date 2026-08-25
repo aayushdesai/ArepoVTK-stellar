@@ -66,6 +66,7 @@ public:
   float stellarBulkVelocity[3], stellarMaterialRadius;
   float stellarDiskRadius, stellarDiskHalfThickness;
   float stellarPolarInner, stellarPolarOuter, stellarPolarConeRatio;
+  float stellarMergerOpacity, stellarDiskOpacity, stellarPolarOpacity;
   float stellarExposure, stellarBlackPoint, stellarSaturation;
   
   // Animation

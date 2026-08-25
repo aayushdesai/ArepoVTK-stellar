@@ -18,17 +18,13 @@
 #include <omp.h>
 #endif
 
-struct RenderVelocityVector {
-  float value[3];
-};
-
 void addValsContribution( vector<float> &vals, int SphP_ind, double weight,
                           float stellarVelocity[3] = 0 );
 
 // Snapshot temperature is kept outside SphP.Utherm because AREPO
 // initialization rewrites Utherm through the conserved-energy path.
 extern vector<float> RenderTemperature;
-extern vector<RenderVelocityVector> RenderVelocity;
+extern vector<unsigned long long> RenderParticleID;
 
 // Arepo: main interface with Arepo to load a snapshot, create data structures, and return
 class Arepo

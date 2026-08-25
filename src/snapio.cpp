@@ -17,7 +17,7 @@ void ArepoSnapshot::read_ic()
   unsigned int i;
 
   RenderTemperature.clear();
-  RenderVelocity.clear();
+  RenderParticleID.clear();
   
   // locate file(s) and store list of all snapshot files
   vector<string> snapFilenames;
@@ -129,6 +129,7 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
   // buffers
   vector<int> jobIndList;
   vector<float> quantity;
+  vector<unsigned long long> quantity_id;
   vector<float> nelec; // ConvertUthermToKelvin
 #ifdef DOUBLEPRECISION
   vector<double> pos;
@@ -180,7 +181,8 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
     // reserve enough space for index list and float quantity buffer
     jobIndList.reserve( partCounts[Config.curJobNum] );
     quantity.reserve( partCounts[Config.curJobNum] );
-    //quantity_id.reserve( partCounts[Config.curJobNum] );
+    if(Config.stellarTransferEnabled)
+      quantity_id.reserve( partCounts[Config.curJobNum] );
     if( Config.convertUthermToKelvin )
       nelec.reserve( partCounts[Config.curJobNum] );
 #ifdef DOUBLEPRECISION
@@ -240,12 +242,17 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
 #endif
     }
     
-    // ParticleIDs (not needed)
-    //readGroupDatasetSelect( snapFilenames[i], groupName, "ParticleIDs", coord, -1, quantity_id );
-    
-    //for( j=0; j < quantity_id.size(); j++ )
-    //  P[offset + j].ID = quantity_id[j];
-    
+    if(Config.stellarTransferEnabled) {
+      readGroupDatasetSelect(snapFilenames[i], groupName, "ParticleIDs", coord,
+                             -1, quantity_id);
+      if(RenderParticleID.size() < offset + quantity_id.size())
+        RenderParticleID.resize(offset + quantity_id.size());
+      for(j = 0; j < quantity_id.size(); j++) {
+        P[offset + j].ID = quantity_id[j];
+        RenderParticleID[offset + j] = quantity_id[j];
+      }
+    }
+
     // Velocities
     if( groupExists(snapFilenames[i], groupName, "Velocities") )
     {
@@ -253,19 +260,17 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
       {
         readGroupDatasetSelect( snapFilenames[i], groupName, "Velocities", coord, k, quantity );
         
-        if(RenderVelocity.size() < offset + quantity.size())
-          RenderVelocity.resize(offset + quantity.size());
-        for( j=0; j < quantity.size(); j++ ) {
+        for( j=0; j < quantity.size(); j++ )
           P[offset + j].Vel[k] = quantity[j];
-          RenderVelocity[offset + j].value[k] = quantity[j];
-        }
       }
 
-      // convert first entry to scalar magnitude
-      for( j=0; j < quantity.size(); j++ )
-        P[offset + j].Vel[0] = sqrt(P[offset + j].Vel[0]*P[offset + j].Vel[0] + 
-                                      P[offset + j].Vel[1]*P[offset + j].Vel[1] + 
-                                      P[offset + j].Vel[2]*P[offset + j].Vel[2]);
+      // Preserve vector velocity for stellar kinematics. The legacy renderer
+      // stores scalar speed in Vel[0] and retains that exact behavior.
+      if(!Config.stellarTransferEnabled)
+        for( j=0; j < quantity.size(); j++ )
+          P[offset + j].Vel[0] = sqrt(P[offset + j].Vel[0]*P[offset + j].Vel[0] +
+                                        P[offset + j].Vel[1]*P[offset + j].Vel[1] +
+                                        P[offset + j].Vel[2]*P[offset + j].Vel[2]);
     }
     
     // Mass
@@ -444,6 +449,7 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
   // buffers
   vector<float> massTable;
   vector<float> quantity;
+  vector<unsigned long long> quantity_id;
   vector<float> nelec; // ConvertUthermToKelvin
 #ifdef DOUBLEPRECISION
   vector<double> pos;
@@ -493,6 +499,8 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
     
     // reserve enough space for index list and float quantity buffer
     quantity.reserve( partCounts );
+    if(Config.stellarTransferEnabled)
+      quantity_id.reserve( partCounts );
     if( Config.convertUthermToKelvin )
       nelec.reserve( partCounts );
 #ifdef DOUBLEPRECISION
@@ -533,7 +541,18 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
         P[offset + j].Pos[k] = quantity[j];
 #endif
     }
-    
+
+    if(Config.stellarTransferEnabled) {
+      readGroupDataset(snapFilenames[i], groupName, "ParticleIDs", -1,
+                       quantity_id);
+      if(RenderParticleID.size() < offset + quantity_id.size())
+        RenderParticleID.resize(offset + quantity_id.size());
+      for(j = 0; j < quantity_id.size(); j++) {
+        P[offset + j].ID = quantity_id[j];
+        RenderParticleID[offset + j] = quantity_id[j];
+      }
+    }
+
     // Velocities
     if( groupExists(snapFilenames[i], groupName, "Velocities") )
     {
@@ -541,19 +560,15 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
       {
         readGroupDataset( snapFilenames[i], groupName, "Velocities", k, quantity );
         
-        if(RenderVelocity.size() < offset + quantity.size())
-          RenderVelocity.resize(offset + quantity.size());
-        for( j=0; j < quantity.size(); j++ ) {
+        for( j=0; j < quantity.size(); j++ )
           P[offset + j].Vel[k] = quantity[j];
-          RenderVelocity[offset + j].value[k] = quantity[j];
-        }
       }
 
-      // convert first entry to scalar magnitude
-      for( j=0; j < quantity.size(); j++ )
-        P[offset + j].Vel[0] = sqrt(P[offset + j].Vel[0]*P[offset + j].Vel[0] + 
-                                      P[offset + j].Vel[1]*P[offset + j].Vel[1] + 
-                                      P[offset + j].Vel[2]*P[offset + j].Vel[2]);
+      if(!Config.stellarTransferEnabled)
+        for( j=0; j < quantity.size(); j++ )
+          P[offset + j].Vel[0] = sqrt(P[offset + j].Vel[0]*P[offset + j].Vel[0] +
+                                        P[offset + j].Vel[1]*P[offset + j].Vel[1] +
+                                        P[offset + j].Vel[2]*P[offset + j].Vel[2]);
     }
     
     // Mass

@@ -29,6 +29,13 @@ does not define a visible cone or slab boundary. The current GPU scene stores
 only position, density, and temperature, so this velocity-aware recipe is native
 path only until the scene format gains vector velocity.
 
+AREPO initialization may reorder particles. Stellar mode therefore retains the
+velocity vector in `P.Vel`, which follows that reorder, and remaps the protected
+snapshot-temperature sidecar by `ParticleIDs` before interpolation. Keeping
+either field in snapshot order produces visually coherent but physically false
+cell blocks. Layer extinction is configurable independently so the diffuse
+outflow can remain translucent without making the disk or merger disappear.
+
 ## Shot classes
 
 - `merger`: compact thermal material for the binary and coalescence.

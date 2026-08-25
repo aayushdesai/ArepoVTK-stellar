@@ -19,6 +19,9 @@ StellarTransferParameters parameters(int mode)
   value.polar_inner_cm = 5.0e9f;
   value.polar_outer_cm = 5.0e11f;
   value.polar_cone_ratio = 0.7f;
+  value.merger_extinction_per_cm = 3.0e-11f;
+  value.disk_extinction_per_cm = 1.5e-11f;
+  value.polar_extinction_per_cm = 1.2e-12f;
   return value;
 }
 

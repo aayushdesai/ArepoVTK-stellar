@@ -12,8 +12,62 @@
 #include "util.h" // for numberOfCores()
 #include "snapio.h"
 
+#include <unordered_map>
+
 vector<float> RenderTemperature;
-vector<RenderVelocityVector> RenderVelocity;
+vector<unsigned long long> RenderParticleID;
+
+namespace {
+
+float renderVelocityMagnitude(int particle)
+{
+  if(!Config.stellarTransferEnabled)
+    return P[particle].Vel[0];
+  return sqrt(P[particle].Vel[0] * P[particle].Vel[0] +
+              P[particle].Vel[1] * P[particle].Vel[1] +
+              P[particle].Vel[2] * P[particle].Vel[2]);
+}
+
+void remapRenderTemperatureAfterArepoInit()
+{
+  if(!Config.stellarTransferEnabled || RenderTemperature.empty())
+    return;
+  if(RenderTemperature.size() != RenderParticleID.size() ||
+     RenderTemperature.size() != (size_t)NumGas)
+    terminate("Stellar render sidecar size mismatch after AREPO initialization.");
+
+  size_t mismatched = 0;
+  for(int particle = 0; particle < NumGas; particle++)
+    if(RenderParticleID[particle] != (unsigned long long)P[particle].ID)
+      mismatched++;
+  if(mismatched == 0) {
+    cerr << "STELLAR_SIDECAR_REMAP mismatched=0 particles=" << NumGas << endl;
+    RenderParticleID.clear();
+    return;
+  }
+
+  unordered_map<unsigned long long, float> temperatureByID;
+  temperatureByID.reserve(RenderParticleID.size());
+  for(size_t particle = 0; particle < RenderParticleID.size(); particle++)
+    if(!temperatureByID.emplace(RenderParticleID[particle],
+                                RenderTemperature[particle]).second)
+      terminate("Duplicate ParticleID while remapping stellar temperature.");
+
+  vector<float> reordered(NumGas);
+  for(int particle = 0; particle < NumGas; particle++) {
+    const unordered_map<unsigned long long, float>::const_iterator found =
+        temperatureByID.find((unsigned long long)P[particle].ID);
+    if(found == temperatureByID.end())
+      terminate("ParticleID missing while remapping stellar temperature.");
+    reordered[particle] = found->second;
+  }
+  RenderTemperature.swap(reordered);
+  RenderParticleID.clear();
+  cerr << "STELLAR_SIDECAR_REMAP mismatched=" << mismatched
+       << " particles=" << NumGas << endl;
+}
+
+} // namespace
 
 void Arepo::Init(int *argc, char*** argv)
 {
@@ -121,7 +175,9 @@ bool Arepo::LoadSnapshot()
       return false;
     }
   }
-  
+
+  remapRenderTemperatureAfterArepoInit();
+
   if( Config.readPartType != 0 )
   {
     // we will need a density estimate from the Voronoi mesh
@@ -230,11 +286,12 @@ void Arepo::ComputeQuantityBounds()
           umin = renderTemp;
       umean += renderTemp;
 
-      if (P[i].Vel[0] > vmax)
-          vmax = P[i].Vel[0];
-      if (P[i].Vel[0] < vmin)
-          vmin = P[i].Vel[0];
-      vmean += P[i].Vel[0];
+      const float velocityMagnitude = renderVelocityMagnitude(i);
+      if (velocityMagnitude > vmax)
+          vmax = velocityMagnitude;
+      if (velocityMagnitude < vmin)
+          vmin = velocityMagnitude;
+      vmean += velocityMagnitude;
 
       // MagneticField magnitude
       if (SphP[i].VelVertex[0] > bmax)
@@ -332,6 +389,9 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarParameters.polar_inner_cm = Config.stellarPolarInner;
   stellarParameters.polar_outer_cm = Config.stellarPolarOuter;
   stellarParameters.polar_cone_ratio = Config.stellarPolarConeRatio;
+  stellarParameters.merger_extinction_per_cm = Config.stellarMergerOpacity;
+  stellarParameters.disk_extinction_per_cm = Config.stellarDiskOpacity;
+  stellarParameters.polar_extinction_per_cm = Config.stellarPolarOpacity;
   
   IF_DEBUG(extent.print(" ArepoMesh extent "));
 
@@ -548,9 +608,9 @@ void addValsContribution( vector<float> &vals, int SphP_ind, double weight,
   if( weight < INSIDE_EPS ) // catches negative weights as well
     return;
 
-  if(stellarVelocity && SphP_ind < (int)RenderVelocity.size())
+  if(stellarVelocity && Config.stellarTransferEnabled)
     for(int component = 0; component < 3; component++)
-      stellarVelocity[component] += RenderVelocity[SphP_ind].value[component] * weight;
+      stellarVelocity[component] += P[SphP_ind].Vel[component] * weight;
   
   // gas
   if( Config.readPartType == PARTTYPE_GAS )
@@ -560,7 +620,7 @@ void addValsContribution( vector<float> &vals, int SphP_ind, double weight,
                                  ? RenderTemperature[SphP_ind]
                                  : SphP[SphP_ind].Utherm;
     vals[TF_VAL_TEMP]    += renderTemp * weight;
-    vals[TF_VAL_VMAG]    += P[SphP_ind].Vel[0] * weight;
+    vals[TF_VAL_VMAG]    += renderVelocityMagnitude(SphP_ind) * weight;
     vals[TF_VAL_ENTROPY] += SphP[SphP_ind].OldMass * weight;
     vals[TF_VAL_METAL]   += 0.0; //SphP[SphP_ind].Metallicity * weight;
     // SZ y-parameter (no constants, not real units)
@@ -583,7 +643,7 @@ void addValsContribution( vector<float> &vals, int SphP_ind, double weight,
   {
     vals[TF_VAL_DENS]    += SphP[SphP_ind].Density * weight;
     vals[TF_VAL_TEMP]    += 0.0;
-    vals[TF_VAL_VMAG]    += P[SphP_ind].Vel[0] * weight;
+    vals[TF_VAL_VMAG]    += renderVelocityMagnitude(SphP_ind) * weight;
     vals[TF_VAL_ENTROPY] += 0.0;
     vals[TF_VAL_METAL]   += 0.0;
     vals[TF_VAL_SZY]     += 0.0;
