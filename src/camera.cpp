@@ -13,6 +13,7 @@
 #include "camera.h"
 #include "spectrum.h"
 #include "snapio.h"
+#include "stellar_render_model_v051a.h"
 
 // Filter
 
@@ -508,6 +509,11 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
 
   offset = 0;
 
+  if(Config.stellarTransferEnabled) {
+    Config.minScale = 0.0f;
+    Config.maxScale = 1.0f;
+  }
+
   // scale the intensity into [0.0,1.0] based on the FIRST frame, or based on input
   if( Config.maxScale <= 0.0 )
   {
@@ -551,9 +557,22 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
   
   for (int y = 0; y < yPixelCount; ++y) {
     for (int x = 0; x < xPixelCount; ++x) {
-      rgb[3*offset  ] = (rgb[3*offset  ] - Config.minScale) * invFac;
-      rgb[3*offset+1] = (rgb[3*offset+1] - Config.minScale) * invFac;
-      rgb[3*offset+2] = (rgb[3*offset+2] - Config.minScale) * invFac;
+      if(Config.stellarTransferEnabled) {
+        float mapped[3];
+        for(int channel = 0; channel < 3; channel++)
+          mapped[channel] = stellarFilmicMap(
+              rgb[3 * offset + channel], Config.stellarExposure,
+              Config.stellarBlackPoint);
+        const float luma = 0.2126f * mapped[0] + 0.7152f * mapped[1] +
+                           0.0722f * mapped[2];
+        for(int channel = 0; channel < 3; channel++)
+          rgb[3 * offset + channel] = Clamp(
+              luma + Config.stellarSaturation * (mapped[channel] - luma), 0.0f, 1.0f);
+      } else {
+        rgb[3*offset  ] = (rgb[3*offset  ] - Config.minScale) * invFac;
+        rgb[3*offset+1] = (rgb[3*offset+1] - Config.minScale) * invFac;
+        rgb[3*offset+2] = (rgb[3*offset+2] - Config.minScale) * invFac;
+      }
       alpha[offset]   = (alpha[offset] - Config.minAlpha) / (Config.maxAlpha - Config.minAlpha);
       offset++;
     }

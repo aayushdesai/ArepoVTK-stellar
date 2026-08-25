@@ -111,6 +111,20 @@ void ConfigSet::ReadFile(string cfgfile)
   takeLogUtherm         = readValue<bool>("takeLogUtherm", false);
   takeLogDens           = readValue<bool>("takeLogDens", false);
 
+  // Stellar-merger rendering
+  stellarTransferEnabled = readValue<bool>("stellarTransferEnabled", false);
+  stellarTransferMode = readValue<string>("stellarTransferMode", "merger");
+  splitStrArray(readValue<string>("stellarCenter", "0 0 0"), &stellarCenter[0]);
+  splitStrArray(readValue<string>("stellarAxis", "0 0 1"), &stellarAxis[0]);
+  stellarDiskRadius = readValue<float>("stellarDiskRadius", 3.0e10f);
+  stellarDiskHalfThickness = readValue<float>("stellarDiskHalfThickness", 3.0e9f);
+  stellarPolarInner = readValue<float>("stellarPolarInner", 5.0e9f);
+  stellarPolarOuter = readValue<float>("stellarPolarOuter", 5.0e11f);
+  stellarPolarConeRatio = readValue<float>("stellarPolarConeRatio", 0.7f);
+  stellarExposure = readValue<float>("stellarExposure", 1.4f);
+  stellarBlackPoint = readValue<float>("stellarBlackPoint", 0.002f);
+  stellarSaturation = readValue<float>("stellarSaturation", 0.82f);
+
   // Animation
   startFrame    = readValue<int>("startFrame",     0);  
   numFrames     = readValue<int>("numFrames",      1);
@@ -138,7 +152,7 @@ void ConfigSet::ReadFile(string cfgfile)
   splitStrArray( readValue<string>("rgbAbsorb",   "0.0  0.0  0.0")  , &rgbAbsorb[0]  );
   
   // basic validation
-  if (!tfSet.size())
+  if (!tfSet.size() && !stellarTransferEnabled)
     terminate("Config: no TFs specified, going to be a very boring image.");
   //if (projColDens && !totNumJobs)
   //  terminate("Config: ERROR! projColDens only with totNumJobs>0 (custom load).");
@@ -152,6 +166,23 @@ void ConfigSet::ReadFile(string cfgfile)
     terminate("Config: ERROR! Unsupported readPartType.");
   if (takeLogDens && (rgbAbsorb[0] > 0.0 || rgbAbsorb[1] > 0.0 || rgbAbsorb[2] > 0.0))
     terminate("Config: WARNING: Will be using log(density) weighting due to nonzero absorption (maybe ok).");
+
+  if (stellarTransferEnabled) {
+    if (!takeLogDens)
+      terminate("Config: stellar transfer requires takeLogDens=true.");
+    if (stellarTransferMode != "merger" && stellarTransferMode != "disk" &&
+        stellarTransferMode != "outflow" && stellarTransferMode != "composite")
+      terminate("Config: unknown stellarTransferMode.");
+    const float axisNorm = sqrt(stellarAxis[0] * stellarAxis[0] +
+                                stellarAxis[1] * stellarAxis[1] +
+                                stellarAxis[2] * stellarAxis[2]);
+    if (!(axisNorm > 0.0f) || !(stellarDiskRadius > 0.0f) ||
+        !(stellarDiskHalfThickness > 0.0f) || !(stellarPolarInner > 0.0f) ||
+        !(stellarPolarOuter > stellarPolarInner) || !(stellarPolarConeRatio > 0.0f) ||
+        !(stellarExposure > 0.0f) || stellarBlackPoint < 0.0f ||
+        stellarSaturation < 0.0f)
+      terminate("Config: invalid stellar transfer or display parameter.");
+  }
     
   // render setup validation
   if (viStepSize == 0.0 && nTreeNGB)

@@ -10,10 +10,13 @@
 #include "geometry.h"
 #include "transform.h"
 #include "camera.h" 
+#include "arepo.h"
 
 void ArepoSnapshot::read_ic()
 {
   unsigned int i;
+
+  RenderTemperature.clear();
   
   // locate file(s) and store list of all snapshot files
   vector<string> snapFilenames;
@@ -304,6 +307,18 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
         for( j=0; j < quantity.size(); j++ )
           SphP[offset + j].Utherm = quantity[j];
       }
+
+      if( groupExists(snapFilenames[i], groupName, "Temperature") )
+        readGroupDatasetSelect(snapFilenames[i], groupName, "Temperature", coord, -1, quantity);
+      else {
+        quantity.resize(partCounts[i]);
+        for(j = 0; j < quantity.size(); j++)
+          quantity[j] = SphP[offset + j].Utherm;
+      }
+      if(RenderTemperature.size() < offset + quantity.size())
+        RenderTemperature.resize(offset + quantity.size());
+      for(j = 0; j < quantity.size(); j++)
+        RenderTemperature[offset + j] = quantity[j];
         
       // ElectrunAbundance (Ne)
       if( groupExists(snapFilenames[i], groupName, "ElectronAbundance") )
@@ -573,6 +588,18 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
         for( j=0; j < quantity.size(); j++ )
           SphP[offset + j].Utherm = quantity[j];
       }
+
+      if( groupExists(snapFilenames[i], groupName, "Temperature") )
+        readGroupDataset(snapFilenames[i], groupName, "Temperature", -1, quantity);
+      else {
+        quantity.resize(partCounts);
+        for(j = 0; j < quantity.size(); j++)
+          quantity[j] = SphP[offset + j].Utherm;
+      }
+      if(RenderTemperature.size() < offset + quantity.size())
+        RenderTemperature.resize(offset + quantity.size());
+      for(j = 0; j < quantity.size(); j++)
+        RenderTemperature[offset + j] = quantity[j];
         
       // ElectrunAbundance (Ne)
       if( groupExists(snapFilenames[i], groupName, "ElectronAbundance") )

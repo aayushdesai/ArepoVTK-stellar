@@ -11,6 +11,7 @@
 #endif
 
 #include "transfer.h"
+#include "stellar_render_model_v051a.h"
 #include "voronoi_3db.h"
 
 #if (NUM_THREADS > 1)
@@ -18,6 +19,10 @@
 #endif
 
 void addValsContribution( vector<float> &vals, int SphP_ind, double weight );
+
+// Snapshot temperature is kept outside SphP.Utherm because AREPO
+// initialization rewrites Utherm through the conserved-energy path.
+extern vector<float> RenderTemperature;
 
 // Arepo: main interface with Arepo to load a snapshot, create data structures, and return
 class Arepo
@@ -113,6 +118,7 @@ private:
   // rendering
   BBox extent;
   const TransferFunction *transferFunction;
+  StellarTransferParameters stellarParameters;
   
   // units, etc
   float unitConversions[TF_NUM_VALS]; // mult factor from code units to ArepoVTK "units"

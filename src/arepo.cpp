@@ -12,6 +12,8 @@
 #include "util.h" // for numberOfCores()
 #include "snapio.h"
 
+vector<float> RenderTemperature;
+
 void Arepo::Init(int *argc, char*** argv)
 {
   MPI_Init(argc, argv);
@@ -218,11 +220,14 @@ void Arepo::ComputeQuantityBounds()
           pmin = SphP[i].Density;
       pmean += SphP[i].Density;
       
-      if (SphP[i].Utherm > umax)
-          umax = SphP[i].Utherm;
-      if (SphP[i].Utherm < umin)
-          umin = SphP[i].Utherm;
-      umean += SphP[i].Utherm;
+      const float renderTemp = i < (int)RenderTemperature.size()
+                                   ? RenderTemperature[i]
+                                   : SphP[i].Utherm;
+      if (renderTemp > umax)
+          umax = renderTemp;
+      if (renderTemp < umin)
+          umin = renderTemp;
+      umean += renderTemp;
 
       if (P[i].Vel[0] > vmax)
           vmax = P[i].Vel[0];
@@ -301,8 +306,29 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   // boxsize
   extent = BBox(Point(0.0,0.0,0.0),Point(All.BoxSize,All.BoxSize,All.BoxSize));
   
-  if( !All.BoxSize ) 
+  if( !All.BoxSize )
     terminate("Error: All.BoxSize=0, likely structure mismatch.");
+
+  stellarParameters.mode = STELLAR_TRANSFER_MERGER;
+  if(Config.stellarTransferMode == "disk")
+    stellarParameters.mode = STELLAR_TRANSFER_DISK;
+  if(Config.stellarTransferMode == "outflow")
+    stellarParameters.mode = STELLAR_TRANSFER_OUTFLOW;
+  if(Config.stellarTransferMode == "composite")
+    stellarParameters.mode = STELLAR_TRANSFER_COMPOSITE;
+  const double axisNorm = sqrt(Config.stellarAxis[0] * Config.stellarAxis[0] +
+                               Config.stellarAxis[1] * Config.stellarAxis[1] +
+                               Config.stellarAxis[2] * Config.stellarAxis[2]);
+  for(int axis = 0; axis < 3; axis++) {
+    stellarParameters.center[axis] = Config.stellarCenter[axis];
+    stellarParameters.axis[axis] = Config.stellarAxis[axis] / axisNorm;
+  }
+  stellarParameters.box_size = All.BoxSize;
+  stellarParameters.disk_radius_cm = Config.stellarDiskRadius;
+  stellarParameters.disk_half_thickness_cm = Config.stellarDiskHalfThickness;
+  stellarParameters.polar_inner_cm = Config.stellarPolarInner;
+  stellarParameters.polar_outer_cm = Config.stellarPolarOuter;
+  stellarParameters.polar_cone_ratio = Config.stellarPolarConeRatio;
   
   IF_DEBUG(extent.print(" ArepoMesh extent "));
 
@@ -522,7 +548,10 @@ void addValsContribution( vector<float> &vals, int SphP_ind, double weight )
   if( Config.readPartType == PARTTYPE_GAS )
   {
     vals[TF_VAL_DENS]    += SphP[SphP_ind].Density * weight;
-    vals[TF_VAL_TEMP]    += SphP[SphP_ind].Utherm * weight;
+    const float renderTemp = SphP_ind < (int)RenderTemperature.size()
+                                 ? RenderTemperature[SphP_ind]
+                                 : SphP[SphP_ind].Utherm;
+    vals[TF_VAL_TEMP]    += renderTemp * weight;
     vals[TF_VAL_VMAG]    += P[SphP_ind].Vel[0] * weight;
     vals[TF_VAL_ENTROPY] += SphP[SphP_ind].OldMass * weight;
     vals[TF_VAL_METAL]   += 0.0; //SphP[SphP_ind].Metallicity * weight;
@@ -957,25 +986,37 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
         if( vals[TF_VAL_DENS] < 0.0 )
           vals[TF_VAL_DENS] = 0.0;
 
-        // accumulate optical depth during sampling (reduce transmittance accordingly)
-        // note: Transmittance=1-Opacity
-        Spectrum localAlpha(1.0);
-        if( !(transferFunction->sigma_t() == 0) )
-        {
-          stepTau += transferFunction->sigma_t() * vals[TF_VAL_DENS] * stepSize;
-          localAlpha += -1.0*Exp(-stepTau); // essentially density weighting
-          //localAlpha = 1.0; // old behavior
+        if(Config.stellarTransferEnabled) {
+          const double samplePosition[3] = {samplept.x, samplept.y, samplept.z};
+          const StellarOpticalSample optical = evaluateStellarOpticalSample(
+              stellarParameters, samplePosition, vals[TF_VAL_DENS], vals[TF_VAL_TEMP]);
+          const float alpha = 1.0f - expf(-optical.extinction_per_cm * stepSize);
+          if(status && alpha > 0.0f) {
+            Spectrum source = Spectrum::FromRGB(optical.color);
+            Lv += Tr * source * alpha;
+            Tr *= 1.0f - alpha;
+          }
+        } else {
+          // accumulate optical depth during sampling (reduce transmittance accordingly)
+          // note: Transmittance=1-Opacity
+          Spectrum localAlpha(1.0);
+          if( !(transferFunction->sigma_t() == 0) )
+          {
+            stepTau += transferFunction->sigma_t() * vals[TF_VAL_DENS] * stepSize;
+            localAlpha += -1.0*Exp(-stepTau); // essentially density weighting
+            //localAlpha = 1.0; // old behavior
+          }
+
+          // compute emission-only source term using transfer function
+          if(status)
+            Lv += Tr * localAlpha * transferFunction->Lve(vals) * stepSize;
+
+          //TODO: try disabling this Tr*= below, and/or add modifier factor (seems much too
+          //strong, e.g. stepTau=10 reduces this to zero and kills the ray, i.e. going through one
+          //cell with Density ten times above rgbAbsorb)
+          Tr *= Exp(-stepTau); // normal RT equation behavior
+          //Tr = Tr - localAlpha * Tr; // essentially density weighting
         }
-        
-        // compute emission-only source term using transfer function
-        if(status)
-          Lv += Tr * localAlpha * transferFunction->Lve(vals) * stepSize;
-        
-        //TODO: try disabling this Tr*= below, and/or add modifier factor (seems much too 
-        //strong, e.g. stepTau=10 reduces this to zero and kills the ray, i.e. going through one 
-        //cell with Density ten times above rgbAbsorb)    
-        Tr *= Exp(-stepTau); // normal RT equation behavior
-        //Tr = Tr - localAlpha * Tr; // essentially density weighting
             
         // update raw column density integrals, same weighting procedure as in voronoi_makeimage_new()
         // e.g. weight (Temp,Vmag,Ent,Metal) by rho*len and then normalize out at the end

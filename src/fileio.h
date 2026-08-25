@@ -58,6 +58,14 @@ public:
   // Transfer Functions
   int readPartType;
   vector<string> tfSet;
+
+  // Stellar-merger rendering
+  bool stellarTransferEnabled;
+  string stellarTransferMode;
+  float stellarCenter[3], stellarAxis[3];
+  float stellarDiskRadius, stellarDiskHalfThickness;
+  float stellarPolarInner, stellarPolarOuter, stellarPolarConeRatio;
+  float stellarExposure, stellarBlackPoint, stellarSaturation;
   
   // Animation
   vector<string> kfSet; // key frames
