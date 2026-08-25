@@ -144,7 +144,7 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
   const float outward_axial_fraction = fmaxf(0.0f, outward_axial_velocity) /
       (speed + 1.0e4f);
 
-  const float merger_density = stellarSmoothstep(-3.6f, -2.5f, log_density);
+  const float merger_density = stellarSmoothstep(-3.2f, 2.0f, log_density);
   const float merger_radius = 1.0f - stellarSmoothstep(
       0.78f * parameters.material_radius_cm, parameters.material_radius_cm,
       float(sqrt(radius_squared)));
@@ -156,8 +156,10 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
   const float disk_radius = 1.0f - stellarSmoothstep(
       0.78f * parameters.disk_radius_cm, 1.12f * parameters.disk_radius_cm,
       cylindrical_radius);
-  const float disk_density = stellarSmoothstep(-0.9f, 0.25f, log_density);
-  const float disk_temperature = stellarSmoothstep(6.75f, 7.15f, log_temperature) *
+  const float disk_density = 0.24f * stellarSmoothstep(-1.0f, 0.35f, log_density) +
+      0.76f * stellarSmoothstep(0.35f, 2.05f, log_density);
+  const float disk_temperature = (0.28f + 0.72f *
+      stellarSmoothstep(6.75f, 7.85f, log_temperature)) *
       (1.0f - stellarSmoothstep(8.25f, 8.62f, log_temperature));
   const float disk_rotation = stellarSmoothstep(0.72f, 0.93f, rotational_fraction);
   const float disk_weight = disk_plane * disk_radius * disk_density * disk_temperature *
@@ -172,26 +174,27 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
       absolute_height) *
       (1.0f - stellarSmoothstep(0.90f * parameters.polar_outer_cm,
                                1.08f * parameters.polar_outer_cm, absolute_height));
-  const float polar_density = stellarSmoothstep(-3.25f, -2.65f, log_density) *
-      (1.0f - stellarSmoothstep(-0.45f, 0.25f, log_density));
-  const float polar_temperature = stellarSmoothstep(5.95f, 6.35f, log_temperature) *
+  const float polar_density = stellarSmoothstep(-3.4f, -0.6f, log_density) *
+      (1.0f - stellarSmoothstep(0.2f, 0.9f, log_density));
+  const float polar_temperature = (0.24f + 0.76f *
+      stellarSmoothstep(5.95f, 7.25f, log_temperature)) *
       (1.0f - stellarSmoothstep(7.45f, 7.85f, log_temperature));
-  const float polar_speed = stellarSmoothstep(1.0e8f, 2.0e8f,
+  const float polar_speed = stellarSmoothstep(5.0e7f, 4.0e8f,
                                                outward_axial_velocity);
-  const float polar_coherence = stellarSmoothstep(0.55f, 0.80f,
+  const float polar_coherence = stellarSmoothstep(0.45f, 0.90f,
                                                    outward_axial_fraction);
   const float polar_weight = axial_shape * polar_height * polar_density *
       polar_temperature * polar_speed * polar_coherence;
 
   float blackbody[3];
   stellarTemperatureColor(log_temperature, blackbody);
-  const float disk_tint[3] = {1.00f, 0.72f, 0.34f};
-  const float polar_tint[3] = {0.28f, 0.46f, 1.00f};
+  const float disk_tint[3] = {1.00f, 0.55f, 0.08f};
+  const float polar_tint[3] = {0.08f, 0.18f, 0.80f};
   float disk_color[3];
   float polar_color[3];
   for(int channel = 0; channel < 3; channel++) {
-    disk_color[channel] = 0.72f * blackbody[channel] + 0.28f * disk_tint[channel];
-    polar_color[channel] = 0.35f * blackbody[channel] + 0.65f * polar_tint[channel];
+    disk_color[channel] = 0.80f * blackbody[channel] + 0.20f * disk_tint[channel];
+    polar_color[channel] = 0.25f * blackbody[channel] + 0.75f * polar_tint[channel];
   }
   float merger_mix = 0.0f;
   float disk_mix = 0.0f;
@@ -205,7 +208,7 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
   else {
     merger_mix = 0.42f * merger_weight;
     disk_mix = disk_weight;
-    polar_mix = polar_weight;
+    polar_mix = 0.32f * polar_weight;
   }
 
   const float total = merger_mix + disk_mix + polar_mix;

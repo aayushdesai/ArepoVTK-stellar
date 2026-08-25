@@ -35,6 +35,9 @@ snapshot-temperature sidecar by `ParticleIDs` before interpolation. Keeping
 either field in snapshot order produces visually coherent but physically false
 cell blocks. Layer extinction is configurable independently so the diffuse
 outflow can remain translucent without making the disk or merger disappear.
+Density, temperature, and speed remain continuous weights across the measured
+stellar regimes; they do not plateau to a categorical value over most cells.
+The cylindrical and polar geometry terms are broad tapers only.
 
 ## Shot classes
 
