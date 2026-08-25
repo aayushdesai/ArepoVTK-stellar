@@ -55,8 +55,13 @@ void ArepoSnapshot::read_ic()
   vector<double> headerval;
   readGroupAttribute(snapFilenames[0], "Header", "Time", headerval);
   All.Time = All.TimeBegin = headerval[0];
-  readGroupAttribute(snapFilenames[0], "Header", "HubbleParam", headerval);
-  All.HubbleParam = headerval[0];
+  if(hasGroupAttribute(snapFilenames[0], "Header", "HubbleParam")) {
+    readGroupAttribute(snapFilenames[0], "Header", "HubbleParam", headerval);
+    All.HubbleParam = headerval[0];
+  } else {
+    cout << "Header/HubbleParam absent; retaining parameter-file value "
+         << All.HubbleParam << endl;
+  }
 
   set_cosmo_factors_for_current_time();
   
@@ -403,7 +408,10 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
   if(hasGroupAttribute(snapFilenames[0], "Header", "NumPart_Total"))
   {
     readGroupAttribute( snapFilenames[0], "Header", "NumPart_Total", numPartTotal_low );
-    readGroupAttribute( snapFilenames[0], "Header", "NumPart_Total_HighWord", numPartTotal_high );
+    if(hasGroupAttribute(snapFilenames[0], "Header", "NumPart_Total_HighWord"))
+      readGroupAttribute(snapFilenames[0], "Header", "NumPart_Total_HighWord", numPartTotal_high );
+    else
+      numPartTotal_high.assign(numPartTotal_low.size(), 0);
   
     partCountsTot = numPartTotal_low[Config.readPartType] + (((long long) numPartTotal_high[Config.readPartType]) << 32);
   } else {
@@ -839,7 +847,10 @@ void ArepoSnapshot::makeNewMaskFile(string maskFileName, vector<string> snapFile
   unsigned long long globalCount = 0;
   
   readGroupAttribute( snapFilenames[0], "Header", "NumPart_Total", numPartTotal_low );
-  readGroupAttribute( snapFilenames[0], "Header", "NumPart_Total_HighWord", numPartTotal_high );
+  if(hasGroupAttribute(snapFilenames[0], "Header", "NumPart_Total_HighWord"))
+    readGroupAttribute(snapFilenames[0], "Header", "NumPart_Total_HighWord", numPartTotal_high );
+  else
+    numPartTotal_high.assign(numPartTotal_low.size(), 0);
   
   if( numPartTotal_low.size() != numPartTotal_high.size() ) {
     cout << "Error: Size mismatch between low and highwords for numPartTotal!" << endl;
