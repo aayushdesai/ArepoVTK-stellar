@@ -58,6 +58,11 @@ Every development stage must pass these layers in order:
    field-integral comparisons.
 7. Performance benchmarks only after correctness gates pass.
 
+`tests/config_3.txt` is not an upstream reference test: its camera view axis is
+parallel to `cameraUp`, so `LookAt()` correctly rejects the degenerate basis,
+and the repository contains no committed `frame3.png`. Phase 0 records this
+fixture as invalid rather than weakening the camera guard.
+
 All builds, tests, snapshot reads, renders, and validation run through Slurm on
 eta nodes. Login-node work is limited to source, git, scheduler, and compact
 result inspection.

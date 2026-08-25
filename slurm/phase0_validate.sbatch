@@ -117,7 +117,7 @@ run_render_suite() {
   local log_dir="$2"
   local config output
   mkdir -p "$log_dir"
-  for config in config_2.txt config_2b.txt config_3.txt; do
+  for config in config_2.txt config_2b.txt; do
     output="$(awk '$1 == "imageFile" {print $3; exit}' "$source_copy/tests/$config")"
     rm -f "$source_copy/$output"
     (
@@ -134,11 +134,11 @@ run_render_suite "$out/artifacts/run2" "$out/render_logs/run2"
 
 (
   cd "$out/artifacts/run1"
-  sha256sum frame2.png frame2b.png frame3.png
+  sha256sum frame2.png frame2b.png
 ) >"$out/render_run1.sha256"
 (
   cd "$out/artifacts/run2"
-  sha256sum frame2.png frame2b.png frame3.png
+  sha256sum frame2.png frame2b.png
 ) >"$out/render_run2.sha256"
 diff -u "$out/render_run1.sha256" "$out/render_run2.sha256" \
   >"$out/determinism.diff"
@@ -183,8 +183,8 @@ sha256sum "$out"/artifacts/run1/*.png >"$out/reference_renders.sha256"
 {
   echo "status=PASS"
   echo "completed=$(date -Is)"
-  echo "upstream_render_tests=3"
-  echo "repeat_render_tests=3"
+  echo "upstream_render_tests=2"
+  echo "repeat_render_tests=2"
   echo "pixel_reference_tests=2"
   echo "registry_unit_tests=1"
   echo "deterministic=true"
