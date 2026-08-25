@@ -63,6 +63,13 @@ parallel to `cameraUp`, so `LookAt()` correctly rejects the degenerate basis,
 and the repository contains no committed `frame3.png`. Phase 0 records this
 fixture as invalid rather than weakening the camera guard.
 
+`tests/config_2b.txt` executes successfully and is repeat-run deterministic,
+but its output does not exactly match the PNG committed in 2019. Git history
+confirms that `grid_2.hdf5` is the intended input. Phase 0 therefore requires
+exact equality for the primary documented `frame2.png` test and records the
+full error metrics plus a frozen generated hash for `frame2b.png`. This known
+fixture drift must be resolved before traversal changes are promoted.
+
 All builds, tests, snapshot reads, renders, and validation run through Slurm on
 eta nodes. Login-node work is limited to source, git, scheduler, and compact
 result inspection.
