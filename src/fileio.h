@@ -63,6 +63,7 @@ public:
   bool stellarTransferEnabled;
   string stellarTransferMode;
   float stellarCenter[3], stellarAxis[3];
+  float stellarBulkVelocity[3], stellarMaterialRadius;
   float stellarDiskRadius, stellarDiskHalfThickness;
   float stellarPolarInner, stellarPolarOuter, stellarPolarConeRatio;
   float stellarExposure, stellarBlackPoint, stellarSaturation;

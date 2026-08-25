@@ -18,11 +18,17 @@
 #include <omp.h>
 #endif
 
-void addValsContribution( vector<float> &vals, int SphP_ind, double weight );
+struct RenderVelocityVector {
+  float value[3];
+};
+
+void addValsContribution( vector<float> &vals, int SphP_ind, double weight,
+                          float stellarVelocity[3] = 0 );
 
 // Snapshot temperature is kept outside SphP.Utherm because AREPO
 // initialization rewrites Utherm through the conserved-energy path.
 extern vector<float> RenderTemperature;
+extern vector<RenderVelocityVector> RenderVelocity;
 
 // Arepo: main interface with Arepo to load a snapshot, create data structures, and return
 class Arepo
@@ -95,7 +101,8 @@ public:
   
   // fluid data introspection
   float calcNeighborHSML(int sphInd, Point &pt);
-  int subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int threadNum);
+  int subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int threadNum,
+                    float stellarVelocity[3] = 0);
   
   // NNI_WATSON_SAMBRIDGE
   inline bool needTet(int tt, point *pp, int *node_inds, int *nTet);

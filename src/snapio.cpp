@@ -17,6 +17,7 @@ void ArepoSnapshot::read_ic()
   unsigned int i;
 
   RenderTemperature.clear();
+  RenderVelocity.clear();
   
   // locate file(s) and store list of all snapshot files
   vector<string> snapFilenames;
@@ -252,8 +253,12 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
       {
         readGroupDatasetSelect( snapFilenames[i], groupName, "Velocities", coord, k, quantity );
         
-        for( j=0; j < quantity.size(); j++ )
+        if(RenderVelocity.size() < offset + quantity.size())
+          RenderVelocity.resize(offset + quantity.size());
+        for( j=0; j < quantity.size(); j++ ) {
           P[offset + j].Vel[k] = quantity[j];
+          RenderVelocity[offset + j].value[k] = quantity[j];
+        }
       }
 
       // convert first entry to scalar magnitude
@@ -536,8 +541,12 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
       {
         readGroupDataset( snapFilenames[i], groupName, "Velocities", k, quantity );
         
-        for( j=0; j < quantity.size(); j++ )
+        if(RenderVelocity.size() < offset + quantity.size())
+          RenderVelocity.resize(offset + quantity.size());
+        for( j=0; j < quantity.size(); j++ ) {
           P[offset + j].Vel[k] = quantity[j];
+          RenderVelocity[offset + j].value[k] = quantity[j];
+        }
       }
 
       // convert first entry to scalar magnitude

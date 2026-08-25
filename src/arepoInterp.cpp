@@ -412,20 +412,24 @@ double ArepoMesh::ccVolume(double *ci, double *cj, double *ck, double *ct)
 #endif
 
 // interpolate scalar fields at position pt inside Voronoi cell SphP_ID (various methods)
-int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int threadNum)
+int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals,
+                             int threadNum, float stellarVelocity[3])
 {
   int sphInd = ray.index;
   
   // zero vals we will override in this function
   for( unsigned int i=0; i < vals.size(); i++ )
-    vals[i] = 0.0;  
+    vals[i] = 0.0;
+  if(stellarVelocity)
+    for(int component = 0; component < 3; component++)
+      stellarVelocity[component] = 0.0f;
   
   // check degenerate point in R3, immediate return
   if (fabs(pt.x - P[sphInd].Pos[0]) <= INSIDE_EPS &&
       fabs(pt.y - P[sphInd].Pos[1]) <= INSIDE_EPS &&
       fabs(pt.z - P[sphInd].Pos[2]) <= INSIDE_EPS)
   {
-      addValsContribution( vals, sphInd, 1.0 );
+      addValsContribution( vals, sphInd, 1.0, stellarVelocity );
       return 1;
   }
         
@@ -523,7 +527,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
 #endif
       weightsum += weight;
       
-      addValsContribution( vals, DC[inner_edge].index, weight );
+      addValsContribution( vals, DC[inner_edge].index, weight, stellarVelocity );
     
       if(inner_edge == inner_last_edge)
         break;
@@ -544,7 +548,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
 #endif
     weightsum += weight;
       
-    addValsContribution( vals, sphp_neighbor, weight );
+    addValsContribution( vals, sphp_neighbor, weight, stellarVelocity );
 
 #endif // NATURAL_NEIGHBOR_INNER
     
@@ -577,7 +581,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
 #endif
   weightsum += weight;
   
-  addValsContribution( vals, sphInd, weight );
+  addValsContribution( vals, sphInd, weight, stellarVelocity );
 #ifdef NO_GHOST_CONTRIBS
   }
 #endif
@@ -599,7 +603,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
 #endif
     weightsum += weight;
       
-    addValsContribution( vals, sphp_neighbor, weight );
+    addValsContribution( vals, sphp_neighbor, weight, stellarVelocity );
   }
     
 #endif // BRUTE_FORCE
@@ -609,6 +613,9 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
   
   for( unsigned int i=0; i < vals.size(); i++ )
     vals[i] *= weightsum;
+  if(stellarVelocity)
+    for(int component = 0; component < 3; component++)
+      stellarVelocity[component] *= weightsum;
       
 #endif // NATURAL_NEIGHBOR_IDW or NATURAL_NEIGHBOR_SPHKERNEL
 
@@ -821,7 +828,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
          << weight << " weightsum = " << weightsum << endl;
 #endif
     
-    addValsContribution( vals, sph_neighbor_inds[k], weight );
+    addValsContribution( vals, sph_neighbor_inds[k], weight, stellarVelocity );
   }
   
   // do the volumes lost by all the natural neighbors add up to the sample pt cell volume?
@@ -850,7 +857,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
   pt -= p0cen; // make relative to p[0] position (not Voronoi center)
 
   // apply the (linear) gradient to the sampling point
-  addValsContribution( vals, tt0_SphPID, 1.0 );
+  addValsContribution( vals, tt0_SphPID, 1.0, stellarVelocity );
   vals[TF_VAL_DENS] += Dot(tetraGrad,pt);
   // dtfe gradients for values other than density not available
   
@@ -958,7 +965,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
   {
     int sphInd = getSphPID(DP[node_inds[i]].index);
     
-    addValsContribution( vals, sphInd, DP_vols[ node_inds[i] ] );
+    addValsContribution( vals, sphInd, DP_vols[ node_inds[i] ], stellarVelocity );
     
     IF_DEBUG(cout << "   add node [i " << setw(2) << i << "] [sphInd " << setw(3) << sphInd
                   << "] Dens = " << SphP[sphInd].Density 
@@ -979,6 +986,9 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
   
   for( int i=0; i < vals.size(); i++ )
     vals[i] *= vol_sum;
+  if(stellarVelocity)
+    for(int component = 0; component < 3; component++)
+      stellarVelocity[component] *= vol_sum;
 
 #endif // NNI_WATSON_SAMBRIDGE
 
@@ -992,7 +1002,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
 
 #ifdef CELL_GRADIENTS_DENS
   // add piecewise constant (nearest cell) values (most other gradients not available)
-  addValsContribution( vals, sphInd, 1.0 );
+  addValsContribution( vals, sphInd, 1.0, stellarVelocity );
   
   // periodic displacement between sample point and cell center
   Vector offset;
@@ -1015,7 +1025,7 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int
 /* -------------------------------------------------------------------------------------- */
 
 #ifdef CELL_PIECEWISE_CONSTANT
-  addValsContribution( vals, sphInd, 1.0 );
+  addValsContribution( vals, sphInd, 1.0, stellarVelocity );
 #endif
 
   return 1;

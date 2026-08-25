@@ -116,6 +116,9 @@ void ConfigSet::ReadFile(string cfgfile)
   stellarTransferMode = readValue<string>("stellarTransferMode", "merger");
   splitStrArray(readValue<string>("stellarCenter", "0 0 0"), &stellarCenter[0]);
   splitStrArray(readValue<string>("stellarAxis", "0 0 1"), &stellarAxis[0]);
+  splitStrArray(readValue<string>("stellarBulkVelocity", "0 0 0"),
+                &stellarBulkVelocity[0]);
+  stellarMaterialRadius = readValue<float>("stellarMaterialRadius", 1.2e10f);
   stellarDiskRadius = readValue<float>("stellarDiskRadius", 3.0e10f);
   stellarDiskHalfThickness = readValue<float>("stellarDiskHalfThickness", 3.0e9f);
   stellarPolarInner = readValue<float>("stellarPolarInner", 5.0e9f);
@@ -176,7 +179,8 @@ void ConfigSet::ReadFile(string cfgfile)
     const float axisNorm = sqrt(stellarAxis[0] * stellarAxis[0] +
                                 stellarAxis[1] * stellarAxis[1] +
                                 stellarAxis[2] * stellarAxis[2]);
-    if (!(axisNorm > 0.0f) || !(stellarDiskRadius > 0.0f) ||
+    if (!(axisNorm > 0.0f) || !(stellarMaterialRadius > 0.0f) ||
+        !(stellarDiskRadius > 0.0f) ||
         !(stellarDiskHalfThickness > 0.0f) || !(stellarPolarInner > 0.0f) ||
         !(stellarPolarOuter > stellarPolarInner) || !(stellarPolarConeRatio > 0.0f) ||
         !(stellarExposure > 0.0f) || stellarBlackPoint < 0.0f ||

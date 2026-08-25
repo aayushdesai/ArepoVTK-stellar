@@ -13,6 +13,7 @@
 #include "snapio.h"
 
 vector<float> RenderTemperature;
+vector<RenderVelocityVector> RenderVelocity;
 
 void Arepo::Init(int *argc, char*** argv)
 {
@@ -322,8 +323,10 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   for(int axis = 0; axis < 3; axis++) {
     stellarParameters.center[axis] = Config.stellarCenter[axis];
     stellarParameters.axis[axis] = Config.stellarAxis[axis] / axisNorm;
+    stellarParameters.bulk_velocity_cm_per_s[axis] = Config.stellarBulkVelocity[axis];
   }
   stellarParameters.box_size = All.BoxSize;
+  stellarParameters.material_radius_cm = Config.stellarMaterialRadius;
   stellarParameters.disk_radius_cm = Config.stellarDiskRadius;
   stellarParameters.disk_half_thickness_cm = Config.stellarDiskHalfThickness;
   stellarParameters.polar_inner_cm = Config.stellarPolarInner;
@@ -539,10 +542,15 @@ void ArepoMesh::LocateEntryTetra(const Ray &ray, int *prevEntryTetra)
   *prevEntryTetra = tt;
 }
 
-void addValsContribution( vector<float> &vals, int SphP_ind, double weight )
+void addValsContribution( vector<float> &vals, int SphP_ind, double weight,
+                          float stellarVelocity[3] )
 {
   if( weight < INSIDE_EPS ) // catches negative weights as well
     return;
+
+  if(stellarVelocity && SphP_ind < (int)RenderVelocity.size())
+    for(int component = 0; component < 3; component++)
+      stellarVelocity[component] += RenderVelocity[SphP_ind].value[component] * weight;
   
   // gas
   if( Config.readPartType == PARTTYPE_GAS )
@@ -971,7 +979,9 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
           terminate("ERROR: Sample point outside box. (%g %g %g)",samplept.x,samplept.y,samplept.z);
                                             
         // subsample (replace fields in vals by interpolated values)
-        int status = subSampleCell(ray, samplept, vals, threadNum);
+        float stellarVelocity[3] = {0.0f, 0.0f, 0.0f};
+        int status = subSampleCell(ray, samplept, vals, threadNum,
+                                   stellarVelocity);
             
 #ifdef DEBUG
         double fracstep = 1.0 / nSamples;
@@ -989,7 +999,8 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
         if(Config.stellarTransferEnabled) {
           const double samplePosition[3] = {samplept.x, samplept.y, samplept.z};
           const StellarOpticalSample optical = evaluateStellarOpticalSample(
-              stellarParameters, samplePosition, vals[TF_VAL_DENS], vals[TF_VAL_TEMP]);
+              stellarParameters, samplePosition, vals[TF_VAL_DENS], vals[TF_VAL_TEMP],
+              stellarVelocity);
           const float alpha = 1.0f - expf(-optical.extinction_per_cm * stepSize);
           if(status && alpha > 0.0f) {
             Spectrum source = Spectrum::FromRGB(optical.color);
