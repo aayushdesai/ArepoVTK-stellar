@@ -3,3 +3,4 @@ build/*
 arepo/
 libpng/
 output/
+validation/
