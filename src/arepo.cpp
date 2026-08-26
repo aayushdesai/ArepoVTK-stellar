@@ -374,6 +374,9 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
     stellarParameters.mode = STELLAR_TRANSFER_OUTFLOW;
   if(Config.stellarTransferMode == "composite")
     stellarParameters.mode = STELLAR_TRANSFER_COMPOSITE;
+  stellarParameters.palette_profile = STELLAR_PALETTE_LEGACY_V052;
+  if(Config.stellarPaletteProfile == "copper_blue_v057")
+    stellarParameters.palette_profile = STELLAR_PALETTE_COPPER_BLUE_V057;
   const double axisNorm = sqrt(Config.stellarAxis[0] * Config.stellarAxis[0] +
                                Config.stellarAxis[1] * Config.stellarAxis[1] +
                                Config.stellarAxis[2] * Config.stellarAxis[2]);
@@ -395,6 +398,29 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarParameters.merger_emissivity_per_cm = Config.stellarMergerEmission;
   stellarParameters.disk_emissivity_per_cm = Config.stellarDiskEmission;
   stellarParameters.polar_emissivity_per_cm = Config.stellarPolarEmission;
+
+  if(ThisTask == 0 && Config.stellarTransferEnabled) {
+    const StellarPaletteStyle palette =
+        stellarPaletteStyle(stellarParameters.palette_profile);
+    cerr << "STELLAR_PALETTE_V057 profile="
+         << stellarPaletteProfileName(stellarParameters.palette_profile)
+         << " id=" << stellarParameters.palette_profile
+         << " disk_low=" << palette.disk_low_density[0] << ","
+         << palette.disk_low_density[1] << "," << palette.disk_low_density[2]
+         << " disk_high=" << palette.disk_high_density[0] << ","
+         << palette.disk_high_density[1] << "," << palette.disk_high_density[2]
+         << " polar_low=" << palette.polar_low_density[0] << ","
+         << palette.polar_low_density[1] << "," << palette.polar_low_density[2]
+         << " polar_high=" << palette.polar_high_density[0] << ","
+         << palette.polar_high_density[1] << "," << palette.polar_high_density[2]
+         << " temperature_mix=" << palette.disk_temperature_mix << ","
+         << palette.polar_temperature_mix
+         << " composite_weights=" << palette.composite_merger_weight << ","
+         << palette.composite_disk_weight << ","
+         << palette.composite_polar_weight
+         << " neutral_overlap=" << palette.neutralize_red_blue_overlap
+         << endl;
+  }
   
   IF_DEBUG(extent.print(" ArepoMesh extent "));
 

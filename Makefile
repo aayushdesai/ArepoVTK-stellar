@@ -30,7 +30,7 @@ CFLAGS += -I${GSL_HOME}/include -I${HDF5_HOME}/include -I./libpng/
 LIBS += -L${GSL_HOME}/lib -L${HDF5_HOME}/lib -L./libpng/
 
 OBJS = ArepoRT.o camera.o fileio.o fileio_img.o geometry.o integrator.o keyframe.o renderer.o sampler.o stellar_camera_path_v055.o transfer.o transform.o util.o volume.o snapio.o
-HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h stellar_camera_path_v055.h stellar_camera_v054.h transfer.h transform.h util.h volume.h snapio.h
+HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h stellar_camera_path_v055.h stellar_camera_v054.h stellar_palette_v057.h transfer.h transform.h util.h volume.h snapio.h
 MISC_RM = frame.raw.txt frame.tga
 
 # ENABLE_AREPO
@@ -47,12 +47,15 @@ $(EXECNAME): libarepo.a $(OBJS)
 stellar_camera_director_v056: src/stellar_camera_director_v056.cpp src/stellar_cinematic_director_v056.cpp src/stellar_cinematic_director_v056.h src/stellar_camera_v054.h
 	$(CC) $(CFLAGS) -Isrc src/stellar_cinematic_director_v056.cpp src/stellar_camera_director_v056.cpp -o $@
 
+test_stellar_palette_v057: tests/test_stellar_palette_v057.cpp src/stellar_render_model_v052a.h src/stellar_palette_v057.h
+	$(CC) $(CFLAGS) -Isrc tests/test_stellar_palette_v057.cpp -o $@
+
 libarepo.a:
 	@cd arepo; make libarepo.a;
 
 clean:
 	@cd arepo; make clean;
-	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 $(MISC_RM)
+	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 test_stellar_palette_v057 $(MISC_RM)
 
 build/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(OPT) -c $< -o $@

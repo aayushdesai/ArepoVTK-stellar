@@ -65,6 +65,7 @@ public:
   // Stellar-merger rendering
   bool stellarTransferEnabled;
   string stellarTransferMode;
+  string stellarPaletteProfile;
   int stellarReconstructionMode;
   float stellarIdwPower, stellarSphSupportFactor;
   float stellarCenter[3], stellarAxis[3];
