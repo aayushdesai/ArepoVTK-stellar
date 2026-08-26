@@ -10,7 +10,8 @@
 
 namespace {
 
-bool validStellarDirectionManifest(const string &filename, string *error)
+bool validStellarDirectionManifest(const string &filename, string *schema,
+                                   string *error)
 {
   ifstream input(filename.c_str());
   if(!input.good()) {
@@ -19,10 +20,12 @@ bool validStellarDirectionManifest(const string &filename, string *error)
   }
   string line;
   if(!getline(input, line) ||
-     line != "schema=stellar_cinematic_direction_manifest_v056") {
+     (line != "schema=stellar_cinematic_direction_manifest_v056" &&
+      line != "schema=stellar_cinematic_direction_manifest_v059")) {
     *error = "Invalid stellar camera direction manifest schema: " + filename;
     return false;
   }
+  *schema = line.substr(string("schema=").size());
   error->clear();
   return true;
 }
@@ -53,15 +56,19 @@ FrameManager::FrameManager(vector<string> kfSet)
     if(!stellarCameraPath.loadFile(Config.stellarCameraPath, &error))
       terminate("Stellar camera path: %s", error.c_str());
     if(!Config.stellarCameraDirectionManifest.empty()) {
+      string manifestSchema;
       if(!validStellarDirectionManifest(
-             Config.stellarCameraDirectionManifest, &error))
+             Config.stellarCameraDirectionManifest, &manifestSchema, &error))
         terminate("Stellar camera direction manifest: %s", error.c_str());
       cout << "Stellar camera direction manifest ["
            << Config.stellarCameraDirectionManifest
-           << "] schema [stellar_cinematic_direction_manifest_v056]" << endl;
-      cerr << "STELLAR_CAMERA_MANIFEST_V056 path="
+           << "] schema [" << manifestSchema << "]" << endl;
+      cerr << (manifestSchema ==
+                   "stellar_cinematic_direction_manifest_v059" ?
+                   "STELLAR_CAMERA_MANIFEST_V059 path=" :
+                   "STELLAR_CAMERA_MANIFEST_V056 path=")
            << Config.stellarCameraDirectionManifest
-           << " schema=stellar_cinematic_direction_manifest_v056" << endl;
+           << " schema=" << manifestSchema << endl;
     }
   }
 }
