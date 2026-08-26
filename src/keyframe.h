@@ -7,6 +7,7 @@
 #define AREPO_RT_KEYFRAME_H
 
 #include "transform.h"
+#include "stellar_camera_path_v055.h"
 
 class FrameManager {
 public:
@@ -37,6 +38,9 @@ private:
   // quantities
   float cameraPosition[3];
   float cameraLookAt[3];
+  float cameraUp[3];
+  bool useStellarCameraPath;
+  StellarCameraPathV055 stellarCameraPath;
 };
 
 #endif

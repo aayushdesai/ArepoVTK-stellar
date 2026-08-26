@@ -23,6 +23,13 @@ FrameManager::FrameManager(vector<string> kfSet)
   {
     cameraPosition[i] = Config.cameraPosition[i];
     cameraLookAt[i] = Config.cameraLookAt[i];
+    cameraUp[i] = Config.cameraUp[i];
+  }
+  useStellarCameraPath = !Config.stellarCameraPath.empty();
+  if(useStellarCameraPath) {
+    string error;
+    if(!stellarCameraPath.loadFile(Config.stellarCameraPath, &error))
+      terminate("Stellar camera path: %s", error.c_str());
   }
 }
 
@@ -110,6 +117,33 @@ void FrameManager::Advance(int curFrame)
     
     size_t found = Config.imageFile.find_last_of("/");
     Config.imageFile = Config.imageFile.substr(0,found) + "/frame_" + num + ".tga";
+  }
+
+  if(useStellarCameraPath)
+  {
+    if(curFrame < 0)
+      terminate("Stellar camera path cannot select negative frame %d", curFrame);
+    const StellarCameraPathRowV055 *row =
+        stellarCameraPath.find(static_cast<unsigned long long>(curFrame));
+    if(!row)
+      terminate("Stellar camera path has no row for snapshot %d", curFrame);
+    curTime = static_cast<float>(row->time_seconds);
+    for(int component = 0; component < 3; component++)
+    {
+      cameraPosition[component] =
+          static_cast<float>(row->pose.position[component]);
+      cameraLookAt[component] =
+          static_cast<float>(row->pose.look_at[component]);
+      cameraUp[component] = static_cast<float>(row->pose.up[component]);
+    }
+    Config.swScale = static_cast<float>(row->pose.screen_half_extent_cm);
+    cout << "Stellar camera path frame [" << curFrame << "] "
+         << Config.imageFile << " (time " << curTime << ") cameraXYZ ["
+         << cameraPosition[0] << " " << cameraPosition[1] << " "
+         << cameraPosition[2] << "] cameraLookAt [" << cameraLookAt[0]
+         << " " << cameraLookAt[1] << " " << cameraLookAt[2]
+         << "] swScale [" << Config.swScale << "]" << endl;
+    return;
   }
 
   // update all quantities for the next frame
@@ -204,9 +238,9 @@ Transform FrameManager::SetCamera()
 {
   Transform world2camera;
   
-  world2camera = LookAt(Point(cameraPosition), 
-                        Point(cameraLookAt), 
-                        Vector(Config.cameraUp));
+  world2camera = LookAt(Point(cameraPosition),
+                        Point(cameraLookAt),
+                        Vector(cameraUp));
   
   return world2camera;
 }

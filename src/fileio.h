@@ -48,6 +48,7 @@ public:
   float swScale; // screenWindow mult factor * [-1,1]
   
   string cameraType;
+  string stellarCameraPath;
   float cameraFOV;
   float cameraPosition[3], cameraLookAt[3], cameraUp[3];
   

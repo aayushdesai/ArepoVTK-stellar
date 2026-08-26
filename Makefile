@@ -29,8 +29,8 @@ CFLAGS   = $(OPTIMIZE) -DH5_USE_16_API
 CFLAGS += -I${GSL_HOME}/include -I${HDF5_HOME}/include -I./libpng/
 LIBS += -L${GSL_HOME}/lib -L${HDF5_HOME}/lib -L./libpng/
 
-OBJS = ArepoRT.o camera.o fileio.o fileio_img.o geometry.o integrator.o keyframe.o renderer.o sampler.o transfer.o transform.o util.o volume.o snapio.o
-HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h transfer.h transform.h util.h volume.h snapio.h
+OBJS = ArepoRT.o camera.o fileio.o fileio_img.o geometry.o integrator.o keyframe.o renderer.o sampler.o stellar_camera_path_v055.o transfer.o transform.o util.o volume.o snapio.o
+HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h stellar_camera_path_v055.h stellar_camera_v054.h transfer.h transform.h util.h volume.h snapio.h
 MISC_RM = frame.raw.txt frame.tga
 
 # ENABLE_AREPO

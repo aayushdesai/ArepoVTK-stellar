@@ -99,6 +99,7 @@ void ConfigSet::ReadFile(string cfgfile)
   imageYPixels  = readValue<int>  ("imageYPixels", 500);
   swScale       = readValue<float>("swScale",      1.0f);
   cameraType    = readValue<string>("cameraType",  "ortho");
+  stellarCameraPath = readValue<string>("stellarCameraPath", "");
   cameraFOV     = readValue<float>("cameraFOV",    0.0f); // degrees
   splitStrArray( readValue<string>("cameraPosition") , &cameraPosition[0]   );
   splitStrArray( readValue<string>("cameraLookAt")   , &cameraLookAt[0] );
@@ -243,6 +244,10 @@ void ConfigSet::ReadFile(string cfgfile)
     terminate("Config: ERROR! FOV not used for ortho camera (leave at 0.0).");
   if (cameraType == "perspective" && (cameraFOV <= 0.0 || cameraFOV >= 180.0))
     terminate("Config: ERROR! Perspective camera expects sane FOV.");
+  if (!stellarCameraPath.empty() && cameraType != "orthographic")
+    terminate("Config: ERROR! stellarCameraPath currently requires an orthographic camera.");
+  if (!stellarCameraPath.empty() && !kfSet.empty())
+    terminate("Config: ERROR! stellarCameraPath and addKF cannot be combined.");
     
   // validation not directly related to config file
 #if defined(NATURAL_NEIGHBOR_INTERP) && !defined(NATURAL_NEIGHBOR_INNER)

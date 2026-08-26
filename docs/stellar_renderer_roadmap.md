@@ -57,3 +57,10 @@ orbit shots without reading snapshots in the planner.
 Benchmark complete campaign makespan, freeze availability-first scheduling,
 document the production API, publish fixtures, and require coverage, decoding,
 and checksum audits for release candidates.
+
+The v055 candidate loads strict snapshot-indexed v054 camera tables directly
+in the native renderer. It rejects malformed geometry, missing snapshots, and
+legacy-keyframe conflicts; updates position, look-at, up, and orthographic
+scale before camera creation; and preserves the legacy path when disabled. The
+production contract freezes scientific and cinematic inputs separately and
+defines the evidence required to promote a movie campaign.
