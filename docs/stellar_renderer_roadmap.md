@@ -35,6 +35,11 @@ traversal. Keep the SPH-kernel path as the current reference, repair and test
 IDW, and add a Voronoi-native piecewise or gradient reconstruction. Compare
 field integrals and landmarks before image metrics.
 
+The v053 candidate exposes `sph`, `idw`, and piecewise `voronoi` at runtime.
+All modes use valid first-ring Voronoi neighbors, aligned density/temperature/
+velocity weights, exact-center handling, and deterministic parent-cell
+fallback. The CUDA reader uses the same topology and mode semantics.
+
 ## Phase 5: camera direction
 
 Represent tracked center, orbital plane, angular-momentum axis, disk radius,

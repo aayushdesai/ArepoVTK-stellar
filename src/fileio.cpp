@@ -114,6 +114,19 @@ void ConfigSet::ReadFile(string cfgfile)
   // Stellar-merger rendering
   stellarTransferEnabled = readValue<bool>("stellarTransferEnabled", false);
   stellarTransferMode = readValue<string>("stellarTransferMode", "merger");
+  const string stellarReconstruction =
+      readValue<string>("stellarReconstruction", "sph");
+  if (stellarReconstruction == "sph")
+    stellarReconstructionMode = STELLAR_RECONSTRUCTION_SPH;
+  else if (stellarReconstruction == "idw")
+    stellarReconstructionMode = STELLAR_RECONSTRUCTION_IDW;
+  else if (stellarReconstruction == "voronoi")
+    stellarReconstructionMode = STELLAR_RECONSTRUCTION_VORONOI;
+  else
+    terminate("Config: unknown stellarReconstruction.");
+  stellarIdwPower = readValue<float>("stellarIdwPower", 2.0f);
+  stellarSphSupportFactor =
+      readValue<float>("stellarSphSupportFactor", 1.2f);
   splitStrArray(readValue<string>("stellarCenter", "0 0 0"), &stellarCenter[0]);
   splitStrArray(readValue<string>("stellarAxis", "0 0 1"), &stellarAxis[0]);
   splitStrArray(readValue<string>("stellarBulkVelocity", "0 0 0"),
@@ -185,6 +198,8 @@ void ConfigSet::ReadFile(string cfgfile)
     if (stellarTransferMode != "merger" && stellarTransferMode != "disk" &&
         stellarTransferMode != "outflow" && stellarTransferMode != "composite")
       terminate("Config: unknown stellarTransferMode.");
+    if (!(stellarIdwPower > 0.0f) || !(stellarSphSupportFactor > 0.0f))
+      terminate("Config: invalid stellar reconstruction parameter.");
     const float axisNorm = sqrt(stellarAxis[0] * stellarAxis[0] +
                                 stellarAxis[1] * stellarAxis[1] +
                                 stellarAxis[2] * stellarAxis[2]);

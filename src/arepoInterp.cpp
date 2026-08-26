@@ -204,7 +204,6 @@ void ArepoMesh::precomputeTetraGrads()
 #endif
 }
 
-#ifdef NATURAL_NEIGHBOR_SPHKERNEL
 inline float sph_kernel(float dist, float hinv)
 {
   float u = dist * hinv;
@@ -294,7 +293,91 @@ float ArepoMesh::calcNeighborHSML(int sphInd, Point &pt)
   
   return hinv;
 }
-#endif
+
+int ArepoMesh::subSampleCellStellar(int sphInd, Point &pt,
+                                    vector<float> &vals,
+                                    float stellarVelocity[3])
+{
+  float xtmp, ytmp, ztmp;
+  if(Config.stellarReconstructionMode == STELLAR_RECONSTRUCTION_VORONOI) {
+    addValsContribution(vals, sphInd, 1.0, stellarVelocity);
+    return 1;
+  }
+
+  float inverseSupport = 0.0f;
+  if(Config.stellarReconstructionMode == STELLAR_RECONSTRUCTION_SPH)
+    inverseSupport = Config.stellarSphSupportFactor * calcNeighborHSML(sphInd, pt);
+
+  float weightSum = 0.0f;
+  int edge = SphP[sphInd].first_connection;
+  const int lastEdge = SphP[sphInd].last_connection;
+  while(edge >= 0) {
+    const int neighbor = DC[edge].index;
+    if(neighbor >= 0 && DC[edge].dp_index < NumGas) {
+      const float dx = NGB_PERIODIC_LONG_X(P[neighbor].Pos[0] - pt.x);
+      const float dy = NGB_PERIODIC_LONG_Y(P[neighbor].Pos[1] - pt.y);
+      const float dz = NGB_PERIODIC_LONG_Z(P[neighbor].Pos[2] - pt.z);
+      const float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+      if(distance <= INSIDE_EPS) {
+        for(unsigned int value = 0; value < vals.size(); value++)
+          vals[value] = 0.0f;
+        if(stellarVelocity)
+          for(int component = 0; component < 3; component++)
+            stellarVelocity[component] = 0.0f;
+        addValsContribution(vals, neighbor, 1.0, stellarVelocity);
+        return 1;
+      }
+      const float weight = stellarReconstructionWeight(
+          Config.stellarReconstructionMode, distance, inverseSupport,
+          Config.stellarIdwPower);
+      weightSum += weight;
+      addValsContribution(vals, neighbor, weight, stellarVelocity);
+    }
+    if(edge == lastEdge)
+      break;
+    const int next = DC[edge].next;
+    if(next == edge)
+      terminate("stellar reconstruction connection loop at edge %d", edge);
+    edge = next;
+  }
+
+  const float dx = NGB_PERIODIC_LONG_X(P[sphInd].Pos[0] - pt.x);
+  const float dy = NGB_PERIODIC_LONG_Y(P[sphInd].Pos[1] - pt.y);
+  const float dz = NGB_PERIODIC_LONG_Z(P[sphInd].Pos[2] - pt.z);
+  const float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+  if(distance <= INSIDE_EPS) {
+    for(unsigned int value = 0; value < vals.size(); value++)
+      vals[value] = 0.0f;
+    if(stellarVelocity)
+      for(int component = 0; component < 3; component++)
+        stellarVelocity[component] = 0.0f;
+    addValsContribution(vals, sphInd, 1.0, stellarVelocity);
+    return 1;
+  }
+  const float parentWeight = stellarReconstructionWeight(
+      Config.stellarReconstructionMode, distance, inverseSupport,
+      Config.stellarIdwPower);
+  weightSum += parentWeight;
+  addValsContribution(vals, sphInd, parentWeight, stellarVelocity);
+
+  if(!(weightSum > 0.0f) || !stellarReconstructionFinite(weightSum)) {
+    for(unsigned int value = 0; value < vals.size(); value++)
+      vals[value] = 0.0f;
+    if(stellarVelocity)
+      for(int component = 0; component < 3; component++)
+        stellarVelocity[component] = 0.0f;
+    addValsContribution(vals, sphInd, 1.0, stellarVelocity);
+    return 1;
+  }
+
+  const float inverseWeight = 1.0f / weightSum;
+  for(unsigned int value = 0; value < vals.size(); value++)
+    vals[value] *= inverseWeight;
+  if(stellarVelocity)
+    for(int component = 0; component < 3; component++)
+      stellarVelocity[component] *= inverseWeight;
+  return 1;
+}
 
 #ifdef NATURAL_NEIGHBOR_INTERP
 void inline periodic_wrap_DP_point(point &dp_pt, Point &ref)
@@ -432,6 +515,9 @@ int ArepoMesh::subSampleCell(const Ray &ray, Point &pt, vector<float> &vals,
       addValsContribution( vals, sphInd, 1.0, stellarVelocity );
       return 1;
   }
+
+  if(Config.stellarTransferEnabled)
+    return subSampleCellStellar(sphInd, pt, vals, stellarVelocity);
         
 #if defined(NATURAL_NEIGHBOR_IDW) || defined(NATURAL_NEIGHBOR_SPHKERNEL)
 

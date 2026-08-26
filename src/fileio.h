@@ -7,6 +7,7 @@
 #define AREPO_RT_FILEIO_H
 
 #include "ArepoRT.h"
+#include "stellar_reconstruction_v053.h"
 
 // configuration options
 class ConfigSet {
@@ -62,6 +63,8 @@ public:
   // Stellar-merger rendering
   bool stellarTransferEnabled;
   string stellarTransferMode;
+  int stellarReconstructionMode;
+  float stellarIdwPower, stellarSphSupportFactor;
   float stellarCenter[3], stellarAxis[3];
   float stellarBulkVelocity[3], stellarMaterialRadius;
   float stellarDiskRadius, stellarDiskHalfThickness;

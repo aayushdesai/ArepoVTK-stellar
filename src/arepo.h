@@ -12,6 +12,7 @@
 
 #include "transfer.h"
 #include "stellar_render_model_v052a.h"
+#include "stellar_reconstruction_v053.h"
 #include "voronoi_3db.h"
 
 #if (NUM_THREADS > 1)
@@ -101,6 +102,8 @@ public:
   float calcNeighborHSML(int sphInd, Point &pt);
   int subSampleCell(const Ray &ray, Point &pt, vector<float> &vals, int threadNum,
                     float stellarVelocity[3] = 0);
+  int subSampleCellStellar(int sphInd, Point &pt, vector<float> &vals,
+                           float stellarVelocity[3]);
   
   // NNI_WATSON_SAMBRIDGE
   inline bool needTet(int tt, point *pp, int *node_inds, int *nTet);
