@@ -94,9 +94,51 @@ void rtRenderFrames()
       
     //vi = CreateQuadIntersectionIntegrator();
 
+    const char *stellarExportPath = getenv("AREPORT_STELLAR_EXPORT");
+    const char *stellarExportDir = getenv("AREPORT_STELLAR_EXPORT_DIR");
+    const bool stellarExportEnabled =
+        (stellarExportPath && stellarExportPath[0] != '\0') ||
+        (stellarExportDir && stellarExportDir[0] != '\0');
+    const char *widthText = getenv("AREPORT_STELLAR_WIDTH");
+    const char *heightText = getenv("AREPORT_STELLAR_HEIGHT");
+    const int exportWidth = widthText ? atoi(widthText) : Config.imageXPixels;
+    const int exportHeight = heightText ? atoi(heightText) : Config.imageYPixels;
+    if(stellarExportEnabled) {
+      if(exportWidth <= 0 || exportHeight <= 0)
+        terminate("Invalid stellar scene export dimensions.");
+      Config.imageXPixels = exportWidth;
+      Config.imageYPixels = exportHeight;
+    }
+
     Filter *filter       = CreateBoxFilter();
     Film *film           = CreateFilm(filter);
     Camera *camera       = CreateCamera(Inverse(world2camera), film);
+
+    if(stellarExportEnabled) {
+      string exportPath;
+      bool raysOnly = false;
+      if(stellarExportDir && stellarExportDir[0] != '\0') {
+        ostringstream filename;
+        filename << stellarExportDir << "/scene_";
+        filename.width(4);
+        filename.fill('0');
+        filename << (i - Config.startFrame) << ".bin";
+        exportPath = filename.str();
+        raysOnly = i != Config.startFrame;
+      } else {
+        exportPath = stellarExportPath;
+      }
+      const bool exported = arepoMesh && arepoMesh->ExportStellarGpuScene(
+          camera, exportPath, exportWidth, exportHeight, raysOnly);
+      delete camera;
+      delete vi;
+      if(!exported)
+        terminate("Stellar scene export failed.");
+      if(stellarExportDir && stellarExportDir[0] != '\0')
+        continue;
+      delete scene;
+      return;
+    }
       
     Sampler *sampler     = CreateStratifiedSampler(film, camera);
     Renderer *re         = new Renderer(sampler, camera, vi);

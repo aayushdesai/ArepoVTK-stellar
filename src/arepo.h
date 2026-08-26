@@ -90,6 +90,8 @@ public:
   int FindNearestGasParticle(Point &pt, int guess, double *mindist);
   bool AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1, 
                             Spectrum &Lv, Spectrum &Tr, int threadNum);
+  bool ExportStellarGpuScene(const Camera *camera, const string &filename,
+                             int sampleWidth, int sampleHeight, bool raysOnly);
   
   inline int getSphPID(int dpInd);
   void locateCurrentTetra(const Ray& ray, Vector &pt);

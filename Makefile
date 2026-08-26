@@ -34,7 +34,7 @@ HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe
 MISC_RM = frame.raw.txt frame.tga
 
 # ENABLE_AREPO
-OBJS += arepo.o arepoTree.o arepoInterp.o voronoi_3db.o
+OBJS += arepo.o arepoTree.o arepoInterp.o stellar_gpu_scene_export_v052a.o voronoi_3db.o
 HEAD += arepo.h arepoTree.h
 LIBS += -larepo -lgsl -lgslcblas -lgmp -lhdf5 -pthread -lpng16 #-lhwloc
 

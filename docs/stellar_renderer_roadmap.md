@@ -22,6 +22,12 @@ Version the scene format to carry vector velocity, stable cell identity, units,
 and field-presence flags. Require CPU/GPU classification parity on analytic and
 three-snapshot fixtures before GPU production.
 
+The v052a implementation keeps v041 readers intact, adds a separate packed
+version-5 contract, exports aligned velocity and temperature from the native
+mesh, and shares the v052 transfer and segment functions with its CUDA reader.
+Binary layout and scene-cell kinematic fixtures are mandatory before any
+snapshot pilot is accepted.
+
 ## Phase 4: reconstruction
 
 Define a runtime reconstruction interface around the unchanged Voronoi
