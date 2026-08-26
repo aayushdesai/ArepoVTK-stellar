@@ -64,3 +64,19 @@ legacy-keyframe conflicts; updates position, look-at, up, and orthographic
 scale before camera creation; and preserves the legacy path when disabled. The
 production contract freezes scientific and cinematic inputs separately and
 defines the evidence required to promote a movie campaign.
+
+## Phase 7: cinematic direction
+
+Replace coordinate-table authoring with a versioned, named shot language.
+Keep physical landmark tracking separate from artistic direction; expose
+subject, mode, azimuth, elevation, framing, orbit amount or period, lobe,
+transition duration, easing, and all physical-filter controls. Generate a v055
+native path together with per-frame motion/coverage diagnostics, a no-render
+SVG preview, and a complete no-clobber manifest.
+
+The v056 candidate supports contiguous multi-shot programs and named CLI
+options. It rejects ambiguous orbit controls and allows explicit lobe selection
+without a dummy orbit period. The native renderer can bind and validate the
+direction manifest alongside the generated path, and its audit log includes
+position, look-at, up, and scale. This makes camera revision a short edit and
+dry-run cycle instead of repeated Cartesian trial and error.

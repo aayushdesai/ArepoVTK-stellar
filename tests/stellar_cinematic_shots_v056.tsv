@@ -1,0 +1,4 @@
+# schema=stellar_cinematic_shots_v056
+# name start_snapshot end_snapshot mode subject azimuth_deg elevation_deg framing_margin orbit_degrees orbit_period_seconds lobe_sign transition_seconds easing
+merger_reveal 450 451 disk_oblique merger 28 22 1.08 15 - 1 5 smootherstep
+positive_outflow 452 453 outflow_follow positive_lobe 35 8 1.08 - - 1 0 smoothstep

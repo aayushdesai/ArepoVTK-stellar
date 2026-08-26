@@ -49,6 +49,7 @@ public:
   
   string cameraType;
   string stellarCameraPath;
+  string stellarCameraDirectionManifest;
   float cameraFOV;
   float cameraPosition[3], cameraLookAt[3], cameraUp[3];
   

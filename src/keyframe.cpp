@@ -3,9 +3,31 @@
  * dnelson
  */
 
-#include <sstream> 
+#include <fstream>
+#include <sstream>
 #include "util.h"
 #include "keyframe.h"
+
+namespace {
+
+bool validStellarDirectionManifest(const string &filename, string *error)
+{
+  ifstream input(filename.c_str());
+  if(!input.good()) {
+    *error = "Cannot open stellar camera direction manifest: " + filename;
+    return false;
+  }
+  string line;
+  if(!getline(input, line) ||
+     line != "schema=stellar_cinematic_direction_manifest_v056") {
+    *error = "Invalid stellar camera direction manifest schema: " + filename;
+    return false;
+  }
+  error->clear();
+  return true;
+}
+
+} // namespace
 
 FrameManager::FrameManager(vector<string> kfSet)
 {
@@ -30,6 +52,17 @@ FrameManager::FrameManager(vector<string> kfSet)
     string error;
     if(!stellarCameraPath.loadFile(Config.stellarCameraPath, &error))
       terminate("Stellar camera path: %s", error.c_str());
+    if(!Config.stellarCameraDirectionManifest.empty()) {
+      if(!validStellarDirectionManifest(
+             Config.stellarCameraDirectionManifest, &error))
+        terminate("Stellar camera direction manifest: %s", error.c_str());
+      cout << "Stellar camera direction manifest ["
+           << Config.stellarCameraDirectionManifest
+           << "] schema [stellar_cinematic_direction_manifest_v056]" << endl;
+      cerr << "STELLAR_CAMERA_MANIFEST_V056 path="
+           << Config.stellarCameraDirectionManifest
+           << " schema=stellar_cinematic_direction_manifest_v056" << endl;
+    }
   }
 }
 
@@ -142,7 +175,16 @@ void FrameManager::Advance(int curFrame)
          << cameraPosition[0] << " " << cameraPosition[1] << " "
          << cameraPosition[2] << "] cameraLookAt [" << cameraLookAt[0]
          << " " << cameraLookAt[1] << " " << cameraLookAt[2]
-         << "] swScale [" << Config.swScale << "]" << endl;
+         << "] cameraUp [" << cameraUp[0] << " " << cameraUp[1]
+         << " " << cameraUp[2] << "] swScale [" << Config.swScale
+         << "]" << endl;
+    cerr << "STELLAR_CAMERA_PATH_V055 snapshot=" << curFrame
+         << " position=" << cameraPosition[0] << "," << cameraPosition[1]
+         << "," << cameraPosition[2]
+         << " look_at=" << cameraLookAt[0] << "," << cameraLookAt[1]
+         << "," << cameraLookAt[2]
+         << " up=" << cameraUp[0] << "," << cameraUp[1] << ","
+         << cameraUp[2] << " half_extent=" << Config.swScale << endl;
     return;
   }
 

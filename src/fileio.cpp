@@ -100,6 +100,8 @@ void ConfigSet::ReadFile(string cfgfile)
   swScale       = readValue<float>("swScale",      1.0f);
   cameraType    = readValue<string>("cameraType",  "ortho");
   stellarCameraPath = readValue<string>("stellarCameraPath", "");
+  stellarCameraDirectionManifest =
+      readValue<string>("stellarCameraDirectionManifest", "");
   cameraFOV     = readValue<float>("cameraFOV",    0.0f); // degrees
   splitStrArray( readValue<string>("cameraPosition") , &cameraPosition[0]   );
   splitStrArray( readValue<string>("cameraLookAt")   , &cameraLookAt[0] );
@@ -248,6 +250,8 @@ void ConfigSet::ReadFile(string cfgfile)
     terminate("Config: ERROR! stellarCameraPath currently requires an orthographic camera.");
   if (!stellarCameraPath.empty() && !kfSet.empty())
     terminate("Config: ERROR! stellarCameraPath and addKF cannot be combined.");
+  if (!stellarCameraDirectionManifest.empty() && stellarCameraPath.empty())
+    terminate("Config: ERROR! stellarCameraDirectionManifest requires stellarCameraPath.");
     
   // validation not directly related to config file
 #if defined(NATURAL_NEIGHBOR_INTERP) && !defined(NATURAL_NEIGHBOR_INNER)

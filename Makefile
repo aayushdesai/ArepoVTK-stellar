@@ -44,12 +44,15 @@ INCL := $(addprefix src/,$(INCL))
 $(EXECNAME): libarepo.a $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(OPT) -o $(EXECNAME) $(LIBS)
 
+stellar_camera_director_v056: src/stellar_camera_director_v056.cpp src/stellar_cinematic_director_v056.cpp src/stellar_cinematic_director_v056.h src/stellar_camera_v054.h
+	$(CC) $(CFLAGS) -Isrc src/stellar_cinematic_director_v056.cpp src/stellar_camera_director_v056.cpp -o $@
+
 libarepo.a:
 	@cd arepo; make libarepo.a;
 
 clean:
 	@cd arepo; make clean;
-	rm -f $(OBJS) $(EXECNAME) $(MISC_RM)
+	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 $(MISC_RM)
 
 build/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(OPT) -c $< -o $@
