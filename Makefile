@@ -41,6 +41,8 @@ LIBS += -larepo -lgsl -lgslcblas -lgmp -lhdf5 -pthread -lpng16 #-lhwloc
 OBJS := $(addprefix build/,$(OBJS))
 INCL := $(addprefix src/,$(INCL))
 
+.PHONY: libarepo.a
+
 $(EXECNAME): libarepo.a $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) $(OPT) -o $(EXECNAME) $(LIBS)
 
@@ -72,10 +74,12 @@ test_stellar_palette_v058: tests/test_stellar_palette_v058.cpp src/stellar_rende
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_palette_v058.cpp -o $@
 
 libarepo.a:
-	@cd arepo; make libarepo.a;
+	+$(MAKE) -C arepo libarepo.a
+
+$(OBJS): | libarepo.a
 
 clean:
-	@cd arepo; make clean;
+	+$(MAKE) -C arepo clean
 	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 stellar_camera_director_v059 stellar_camera_director_v060 stellar_camera_director_v061 test_stellar_cinematic_director_v059 test_stellar_cinematic_director_v060 test_stellar_cinematic_director_v061 test_stellar_palette_v057 test_stellar_palette_v058 $(MISC_RM)
 
 build/%.o: src/%.cpp
