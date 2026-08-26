@@ -46,6 +46,12 @@ Represent tracked center, orbital plane, angular-momentum axis, disk radius,
 and polar extent as smoothed physical landmarks. Add shot constraints, scale
 hysteresis, bounded acceleration, and deterministic camera paths.
 
+The v054 candidate keeps material, disk, and polar extents independent; makes
+the angular-momentum sign continuous; parallel-transports the camera roll
+reference; and bounds center acceleration, axis rate, and logarithmic zoom
+rate. It emits no-clobber camera tables for disk, outflow, lobe-following, and
+orbit shots without reading snapshots in the planner.
+
 ## Phase 6: campaign and release
 
 Benchmark complete campaign makespan, freeze availability-first scheduling,
