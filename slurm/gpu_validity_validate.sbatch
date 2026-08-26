@@ -136,6 +136,15 @@ c++ -std=c++11 -Wall -Wextra -Werror -pedantic -I"$source_copy/src" \
 grep -q 'STELLAR_GPU_GEOMETRY_V053B_OK' "$out/gpu_geometry_test.log"
 
 c++ -std=c++11 -Wall -Wextra -Werror -pedantic -I"$source_copy/src" \
+  "$source_copy/tests/test_stellar_gpu_neighbor_reference_v053b.cpp" \
+  -o "$source_copy/build/test_stellar_gpu_neighbor_reference_v053b" \
+  >"$out/gpu_neighbor_reference_build.log" 2>&1
+"$source_copy/build/test_stellar_gpu_neighbor_reference_v053b" \
+  >"$out/gpu_neighbor_reference_test.log" 2>&1
+grep -q 'STELLAR_GPU_NEIGHBOR_REFERENCE_V053B_OK duplicate_contributors=2 support_only_ghosts=1' \
+  "$out/gpu_neighbor_reference_test.log"
+
+c++ -std=c++11 -Wall -Wextra -Werror -pedantic -I"$source_copy/src" \
   "$source_copy/tests/test_stellar_gpu_output_parity_v053b.cpp" \
   -o "$source_copy/build/test_stellar_gpu_output_parity_v053b" \
   >"$out/gpu_output_parity_build.log" 2>&1
@@ -486,6 +495,7 @@ sha256sum "$source_copy/ArepoRT" \
   "$source_copy/build/test_stellar_reconstruction_v053" \
   "$source_copy/build/test_stellar_gpu_ray_status_v053b" \
   "$source_copy/build/test_stellar_gpu_geometry_v053b" \
+  "$source_copy/build/test_stellar_gpu_neighbor_reference_v053b" \
   "$source_copy/build/test_stellar_gpu_output_parity_v053b" \
   "$source_copy/build/test_stellar_camera_v054" \
   "$source_copy/build/stellar_camera_plan_v054" \
@@ -520,6 +530,9 @@ sha256sum "$out/cinematic_path_run1.tsv" \
   echo "gpu_fatal_statuses=invalid_cell,invalid_edge,neighbor_overflow,no_exit_face,cell_limit,nonfinite,unknown"
   echo "gpu_face_geometry=double_cell_positions"
   echo "gpu_periodic_geometry_precision_test=true"
+  echo "gpu_neighbor_semantics=native_edge_multiplicity_with_ghost_support"
+  echo "gpu_duplicate_contributor_test=true"
+  echo "gpu_support_only_ghost_test=true"
   echo "gpu_native_display_encoding_parity=true"
   echo "gpu_display_encoding=arepo_pow_1_over_2_3"
   echo "gpu_obsolete_linear_encoding_rejected=true"

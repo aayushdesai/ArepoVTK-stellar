@@ -18,6 +18,7 @@
 #include "stellar_gpu_scene_format_v052.h"
 #include "stellar_display_encoding_v053b.h"
 #include "stellar_gpu_geometry_v053b.h"
+#include "stellar_gpu_neighbor_reference_v053b.h"
 #include "stellar_gpu_ray_status_v053b.h"
 #include "stellar_reconstruction_v053.h"
 #include "stellar_render_model_v052a.h"
@@ -258,22 +259,14 @@ __host__ __device__ int gatherFirstRingNeighbors(const DeviceScene &scene,
   for(uint64_t edgeIndex = first; edgeIndex < last; edgeIndex++) {
     const ArepoStellarEdge &edge = scene.edges[edgeIndex];
     const int candidate = edgeCell(edge);
-    if(!edgeContributes(edge) || !validCell(scene, candidate) ||
-       candidate == parent)
-      continue;
-    bool duplicate = false;
-    for(int i = 0; i < handledCount; i++)
-      if(handled[i] == candidate) {
-        duplicate = true;
-        break;
-      }
-    if(duplicate)
+    if(!validCell(scene, candidate) || candidate == parent)
       continue;
     if(handledCount >= kMaxNeighbors) {
       *status |= kRayNeighborOverflow;
       return -1;
     }
-    handled[handledCount++] = candidate;
+    handled[handledCount++] = stellarGpuEncodeNeighborV053b(
+        candidate, edgeContributes(edge));
   }
   return handledCount;
 }
@@ -332,7 +325,8 @@ __host__ __device__ bool interpolateReconstruction(
   float maximumNeighborDistance = 0.0f;
   if(scene.reconstruction_mode == STELLAR_RECONSTRUCTION_SPH) {
     for(int i = 0; i < handledCount; i++) {
-      const ArepoStellarCell &cell = scene.cells[handled[i]];
+      const int candidate = stellarGpuDecodeNeighborV053b(handled[i]);
+      const ArepoStellarCell &cell = scene.cells[candidate];
       const float dx = periodicDistance(cell.position[0], point[0], scene.box_size);
       const float dy = periodicDistance(cell.position[1], point[1], scene.box_size);
       const float dz = periodicDistance(cell.position[2], point[2], scene.box_size);
@@ -346,7 +340,10 @@ __host__ __device__ bool interpolateReconstruction(
   StellarReconstructionAccumulator accumulator =
       stellarEmptyReconstructionAccumulator();
   for(int i = 0; i < handledCount; i++) {
-    const ArepoStellarCell &cell = scene.cells[handled[i]];
+    if(!stellarGpuNeighborContributesV053b(handled[i]))
+      continue;
+    const int candidate = stellarGpuDecodeNeighborV053b(handled[i]);
+    const ArepoStellarCell &cell = scene.cells[candidate];
     const float dx = periodicDistance(cell.position[0], point[0], scene.box_size);
     const float dy = periodicDistance(cell.position[1], point[1], scene.box_size);
     const float dz = periodicDistance(cell.position[2], point[2], scene.box_size);
@@ -1051,6 +1048,7 @@ int main(int argc, char **argv)
       report << "display_encoding=arepo_pow_1_over_2_3\n";
       report << "inactive_rays_are_valid=true\n";
       report << "face_geometry=double_cell_positions\n";
+      report << "neighbor_semantics=native_edge_multiplicity_with_ghost_support\n";
       report << "scene_format_version=" << baseHeader.version << "\n";
       report << "render_threads=" << threads << "\n";
       report << "render_label=" << renderLabel << "\n";
@@ -1128,6 +1126,7 @@ int main(int argc, char **argv)
     summary << "display_encoding=arepo_pow_1_over_2_3\n";
     summary << "inactive_rays_are_valid=true\n";
     summary << "face_geometry=double_cell_positions\n";
+    summary << "neighbor_semantics=native_edge_multiplicity_with_ghost_support\n";
     summary << "scene_format_version=" << baseHeader.version << "\n";
     summary << "render_threads=" << threads << "\n";
     summary << "render_label=" << renderLabel << "\n";
