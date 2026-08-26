@@ -23,7 +23,8 @@ bool validStellarDirectionManifest(const string &filename, string *schema,
      (line != "schema=stellar_cinematic_direction_manifest_v056" &&
       line != "schema=stellar_cinematic_direction_manifest_v059" &&
       line != "schema=stellar_cinematic_direction_manifest_v060" &&
-      line != "schema=stellar_cinematic_direction_manifest_v061")) {
+      line != "schema=stellar_cinematic_direction_manifest_v061" &&
+      line != "schema=stellar_cinematic_direction_manifest_v062")) {
     *error = "Invalid stellar camera direction manifest schema: " + filename;
     return false;
   }
@@ -72,6 +73,8 @@ FrameManager::FrameManager(vector<string> kfSet)
         marker = "STELLAR_CAMERA_MANIFEST_V060 path=";
       else if(manifestSchema == "stellar_cinematic_direction_manifest_v061")
         marker = "STELLAR_CAMERA_MANIFEST_V061 path=";
+      else if(manifestSchema == "stellar_cinematic_direction_manifest_v062")
+        marker = "STELLAR_CAMERA_MANIFEST_V062 path=";
       cerr << marker
            << Config.stellarCameraDirectionManifest
            << " schema=" << manifestSchema << endl;
