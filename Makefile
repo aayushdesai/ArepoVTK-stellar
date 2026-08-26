@@ -53,6 +53,12 @@ stellar_camera_director_v059: src/stellar_camera_director_v059.cpp src/stellar_c
 test_stellar_cinematic_director_v059: tests/test_stellar_cinematic_director_v059.cpp src/stellar_cinematic_director_v059.cpp src/stellar_cinematic_director_v059.h src/stellar_camera_path_v055.cpp src/stellar_camera_path_v055.h src/stellar_camera_v054.h
 	$(CC) $(CFLAGS) -Isrc src/stellar_cinematic_director_v059.cpp src/stellar_camera_path_v055.cpp tests/test_stellar_cinematic_director_v059.cpp -o $@
 
+stellar_camera_director_v060: src/stellar_camera_director_v060.cpp src/stellar_cinematic_director_v060.cpp src/stellar_cinematic_director_v060.h src/stellar_camera_v054.h
+	$(CC) $(CFLAGS) -Isrc src/stellar_cinematic_director_v060.cpp src/stellar_camera_director_v060.cpp -o $@
+
+test_stellar_cinematic_director_v060: tests/test_stellar_cinematic_director_v060.cpp src/stellar_cinematic_director_v060.cpp src/stellar_cinematic_director_v060.h src/stellar_camera_path_v055.cpp src/stellar_camera_path_v055.h src/stellar_camera_v054.h
+	$(CC) $(CFLAGS) -Isrc src/stellar_cinematic_director_v060.cpp src/stellar_camera_path_v055.cpp tests/test_stellar_cinematic_director_v060.cpp -o $@
+
 test_stellar_palette_v057: tests/test_stellar_palette_v057.cpp src/stellar_render_model_v052a.h src/stellar_palette_v057.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_palette_v057.cpp -o $@
 
@@ -64,7 +70,7 @@ libarepo.a:
 
 clean:
 	@cd arepo; make clean;
-	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 stellar_camera_director_v059 test_stellar_cinematic_director_v059 test_stellar_palette_v057 test_stellar_palette_v058 $(MISC_RM)
+	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 stellar_camera_director_v059 stellar_camera_director_v060 test_stellar_cinematic_director_v059 test_stellar_cinematic_director_v060 test_stellar_palette_v057 test_stellar_palette_v058 $(MISC_RM)
 
 build/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(OPT) -c $< -o $@
