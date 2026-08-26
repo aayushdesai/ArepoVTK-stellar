@@ -13,7 +13,7 @@
 #include "camera.h"
 #include "spectrum.h"
 #include "snapio.h"
-#include "stellar_render_model_v051a.h"
+#include "stellar_render_model_v052a.h"
 
 // Filter
 

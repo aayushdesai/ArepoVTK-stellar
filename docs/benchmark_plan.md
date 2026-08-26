@@ -69,3 +69,11 @@ records tracked-source and reference-image hashes, builds the unmodified
 renderer with pinned public AREPO, runs upstream tiny-grid tests twice, checks
 determinism, compares committed reference pixels, and runs the standalone
 stellar field-registry unit test.
+
+## Development phases
+
+The package roadmap is recorded in `docs/stellar_renderer_roadmap.md`. Every
+phase keeps the previous model and focused tests as fixtures, validates in an
+eta-only job-specific source copy, and records a zero diff for the native
+Voronoi traversal until the reconstruction phase has independent scientific
+and image-quality acceptance tests.

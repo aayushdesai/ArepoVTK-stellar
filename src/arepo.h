@@ -11,7 +11,7 @@
 #endif
 
 #include "transfer.h"
-#include "stellar_render_model_v051a.h"
+#include "stellar_render_model_v052a.h"
 #include "voronoi_3db.h"
 
 #if (NUM_THREADS > 1)

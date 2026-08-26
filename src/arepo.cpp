@@ -392,6 +392,9 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarParameters.merger_extinction_per_cm = Config.stellarMergerOpacity;
   stellarParameters.disk_extinction_per_cm = Config.stellarDiskOpacity;
   stellarParameters.polar_extinction_per_cm = Config.stellarPolarOpacity;
+  stellarParameters.merger_emissivity_per_cm = Config.stellarMergerEmission;
+  stellarParameters.disk_emissivity_per_cm = Config.stellarDiskEmission;
+  stellarParameters.polar_emissivity_per_cm = Config.stellarPolarEmission;
   
   IF_DEBUG(extent.print(" ArepoMesh extent "));
 
@@ -1061,11 +1064,12 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
           const StellarOpticalSample optical = evaluateStellarOpticalSample(
               stellarParameters, samplePosition, vals[TF_VAL_DENS], vals[TF_VAL_TEMP],
               stellarVelocity);
-          const float alpha = 1.0f - expf(-optical.extinction_per_cm * stepSize);
-          if(status && alpha > 0.0f) {
-            Spectrum source = Spectrum::FromRGB(optical.color);
-            Lv += Tr * source * alpha;
-            Tr *= 1.0f - alpha;
+          const StellarIntegratedSegment segment =
+              integrateStellarOpticalSegment(optical, stepSize);
+          if(status) {
+            Spectrum source = Spectrum::FromRGB(segment.radiance);
+            Lv += Tr * source;
+            Tr *= segment.transmittance;
           }
         } else {
           // accumulate optical depth during sampling (reduce transmittance accordingly)
