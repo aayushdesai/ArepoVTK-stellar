@@ -204,7 +204,8 @@ void ConfigSet::ReadFile(string cfgfile)
         stellarTransferMode != "outflow" && stellarTransferMode != "composite")
       terminate("Config: unknown stellarTransferMode.");
     if (stellarPaletteProfile != "legacy_v052" &&
-        stellarPaletteProfile != "copper_blue_v057")
+        stellarPaletteProfile != "copper_blue_v057" &&
+        stellarPaletteProfile != "copper_blue_accent_v058")
       terminate("Config: unknown stellarPaletteProfile.");
     if (!(stellarIdwPower > 0.0f) || !(stellarSphSupportFactor > 0.0f))
       terminate("Config: invalid stellar reconstruction parameter.");

@@ -36,7 +36,7 @@ int main()
   assert(stellarPaletteProfileValid(STELLAR_PALETTE_LEGACY_V052));
   assert(stellarPaletteProfileValid(STELLAR_PALETTE_COPPER_BLUE_V057));
   assert(!stellarPaletteProfileValid(-1));
-  assert(!stellarPaletteProfileValid(2));
+  assert(!stellarPaletteProfileValid(999));
 
   const StellarPaletteStyle legacy =
       stellarPaletteStyle(STELLAR_PALETTE_LEGACY_V052);

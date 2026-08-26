@@ -377,6 +377,8 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarParameters.palette_profile = STELLAR_PALETTE_LEGACY_V052;
   if(Config.stellarPaletteProfile == "copper_blue_v057")
     stellarParameters.palette_profile = STELLAR_PALETTE_COPPER_BLUE_V057;
+  if(Config.stellarPaletteProfile == "copper_blue_accent_v058")
+    stellarParameters.palette_profile = STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058;
   const double axisNorm = sqrt(Config.stellarAxis[0] * Config.stellarAxis[0] +
                                Config.stellarAxis[1] * Config.stellarAxis[1] +
                                Config.stellarAxis[2] * Config.stellarAxis[2]);
@@ -402,7 +404,10 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   if(ThisTask == 0 && Config.stellarTransferEnabled) {
     const StellarPaletteStyle palette =
         stellarPaletteStyle(stellarParameters.palette_profile);
-    cerr << "STELLAR_PALETTE_V057 profile="
+    cerr << (stellarParameters.palette_profile ==
+                 STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058 ?
+                 "STELLAR_PALETTE_V058 profile=" :
+                 "STELLAR_PALETTE_V057 profile=")
          << stellarPaletteProfileName(stellarParameters.palette_profile)
          << " id=" << stellarParameters.palette_profile
          << " disk_low=" << palette.disk_low_density[0] << ","
@@ -413,11 +418,25 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
          << palette.polar_low_density[1] << "," << palette.polar_low_density[2]
          << " polar_high=" << palette.polar_high_density[0] << ","
          << palette.polar_high_density[1] << "," << palette.polar_high_density[2]
+         << " polar_accent_low=" << palette.polar_accent_low_density[0] << ","
+         << palette.polar_accent_low_density[1] << ","
+         << palette.polar_accent_low_density[2]
+         << " polar_accent_high=" << palette.polar_accent_high_density[0] << ","
+         << palette.polar_accent_high_density[1] << ","
+         << palette.polar_accent_high_density[2]
          << " temperature_mix=" << palette.disk_temperature_mix << ","
          << palette.polar_temperature_mix
+         << " polar_accent_window="
+         << palette.polar_accent_temperature_low << ","
+         << palette.polar_accent_temperature_high << ","
+         << palette.polar_accent_speed_low << ","
+         << palette.polar_accent_speed_high << ","
+         << palette.polar_accent_coherence_low << ","
+         << palette.polar_accent_coherence_high
          << " composite_weights=" << palette.composite_merger_weight << ","
          << palette.composite_disk_weight << ","
          << palette.composite_polar_weight
+         << " polar_accent=" << palette.polar_accent_enabled
          << " neutral_overlap=" << palette.neutralize_red_blue_overlap
          << endl;
   }

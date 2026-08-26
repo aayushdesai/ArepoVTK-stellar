@@ -50,12 +50,15 @@ stellar_camera_director_v056: src/stellar_camera_director_v056.cpp src/stellar_c
 test_stellar_palette_v057: tests/test_stellar_palette_v057.cpp src/stellar_render_model_v052a.h src/stellar_palette_v057.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_palette_v057.cpp -o $@
 
+test_stellar_palette_v058: tests/test_stellar_palette_v058.cpp src/stellar_render_model_v052a.h src/stellar_palette_v057.h
+	$(CC) $(CFLAGS) -Isrc tests/test_stellar_palette_v058.cpp -o $@
+
 libarepo.a:
 	@cd arepo; make libarepo.a;
 
 clean:
 	@cd arepo; make clean;
-	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 test_stellar_palette_v057 $(MISC_RM)
+	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 test_stellar_palette_v057 test_stellar_palette_v058 $(MISC_RM)
 
 build/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(OPT) -c $< -o $@

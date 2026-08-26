@@ -204,6 +204,19 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
   const float polar_color_fraction = stellarSmoothstep(-3.0f, -0.70f, log_density);
   float disk_color[3];
   float polar_color[3];
+  float polar_accent_fraction = 0.0f;
+  if(palette.polar_accent_enabled) {
+    polar_accent_fraction =
+        stellarSmoothstep(palette.polar_accent_temperature_low,
+                          palette.polar_accent_temperature_high,
+                          log_temperature) *
+        stellarSmoothstep(palette.polar_accent_speed_low,
+                          palette.polar_accent_speed_high,
+                          outward_axial_velocity) *
+        stellarSmoothstep(palette.polar_accent_coherence_low,
+                          palette.polar_accent_coherence_high,
+                          outward_axial_fraction);
+  }
   for(int channel = 0; channel < 3; channel++) {
     const float disk_density_color = palette.disk_low_density[channel] +
         disk_color_fraction *
@@ -211,10 +224,16 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
     const float polar_density_color = palette.polar_low_density[channel] +
         polar_color_fraction *
         (palette.polar_high_density[channel] - palette.polar_low_density[channel]);
+    const float polar_accent_color = palette.polar_accent_low_density[channel] +
+        polar_color_fraction *
+        (palette.polar_accent_high_density[channel] -
+         palette.polar_accent_low_density[channel]);
+    const float styled_polar_color = polar_density_color +
+        polar_accent_fraction * (polar_accent_color - polar_density_color);
     disk_color[channel] = palette.disk_temperature_mix * blackbody[channel] +
         (1.0f - palette.disk_temperature_mix) * disk_density_color;
     polar_color[channel] = palette.polar_temperature_mix * blackbody[channel] +
-        (1.0f - palette.polar_temperature_mix) * polar_density_color;
+        (1.0f - palette.polar_temperature_mix) * styled_polar_color;
   }
   float merger_mix = 0.0f;
   float disk_mix = 0.0f;
