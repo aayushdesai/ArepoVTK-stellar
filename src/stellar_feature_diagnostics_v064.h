@@ -25,6 +25,16 @@ struct StellarFeatureProbeRowV064 {
   double projected_max_fraction;
   double weighted_screen_center_x_fraction;
   double weighted_screen_center_y_fraction;
+  double weighted_screen_x_q01;
+  double weighted_screen_x_q05;
+  double weighted_screen_x_q50;
+  double weighted_screen_x_q95;
+  double weighted_screen_x_q99;
+  double weighted_screen_y_q01;
+  double weighted_screen_y_q05;
+  double weighted_screen_y_q50;
+  double weighted_screen_y_q95;
+  double weighted_screen_y_q99;
   double weighted_screen_abs_x_q90;
   double weighted_screen_abs_x_q95;
   double weighted_screen_abs_x_q99;

@@ -366,6 +366,8 @@ bool stellarProbeSceneV064(
       std::vector<StellarWeightedValueV066> screen_abs_x_values;
       std::vector<StellarWeightedValueV066> screen_abs_y_values;
       std::vector<StellarWeightedValueV066> screen_half_extent_values;
+      std::vector<StellarWeightedValueV066> screen_x_values;
+      std::vector<StellarWeightedValueV066> screen_y_values;
       double weighted_screen_x = 0.0;
       double weighted_screen_y = 0.0;
       double weighted_signed_height = 0.0;
@@ -411,6 +413,8 @@ bool stellarProbeSceneV064(
             parameters.polar_outer_cm;
         screen_abs_x_values.push_back({std::fabs(screen_x), weight});
         screen_abs_y_values.push_back({std::fabs(screen_y), weight});
+        screen_x_values.push_back({screen_x, weight});
+        screen_y_values.push_back({screen_y, weight});
         screen_half_extent_values.push_back({
             std::max(std::fabs(screen_x), std::fabs(screen_y)), weight});
         min_x = std::min(min_x, pixel_x);
@@ -434,6 +438,26 @@ bool stellarProbeSceneV064(
             weighted_screen_x / row.selected_weight;
         row.weighted_screen_center_y_fraction =
             weighted_screen_y / row.selected_weight;
+        row.weighted_screen_x_q01 = stellarWeightedQuantileV066(
+            screen_x_values, row.selected_weight, 0.01);
+        row.weighted_screen_x_q05 = stellarWeightedQuantileV066(
+            screen_x_values, row.selected_weight, 0.05);
+        row.weighted_screen_x_q50 = stellarWeightedQuantileV066(
+            screen_x_values, row.selected_weight, 0.50);
+        row.weighted_screen_x_q95 = stellarWeightedQuantileV066(
+            screen_x_values, row.selected_weight, 0.95);
+        row.weighted_screen_x_q99 = stellarWeightedQuantileV066(
+            screen_x_values, row.selected_weight, 0.99);
+        row.weighted_screen_y_q01 = stellarWeightedQuantileV066(
+            screen_y_values, row.selected_weight, 0.01);
+        row.weighted_screen_y_q05 = stellarWeightedQuantileV066(
+            screen_y_values, row.selected_weight, 0.05);
+        row.weighted_screen_y_q50 = stellarWeightedQuantileV066(
+            screen_y_values, row.selected_weight, 0.50);
+        row.weighted_screen_y_q95 = stellarWeightedQuantileV066(
+            screen_y_values, row.selected_weight, 0.95);
+        row.weighted_screen_y_q99 = stellarWeightedQuantileV066(
+            screen_y_values, row.selected_weight, 0.99);
         row.weighted_screen_abs_x_q90 = stellarWeightedQuantileV066(
             screen_abs_x_values, row.selected_weight, 0.90);
         row.weighted_screen_abs_x_q95 = stellarWeightedQuantileV066(
@@ -495,6 +519,16 @@ bool stellarProbeSceneV064(
         row.weighted_median_rotational_fraction = nan;
         row.weighted_screen_center_x_fraction = nan;
         row.weighted_screen_center_y_fraction = nan;
+        row.weighted_screen_x_q01 = nan;
+        row.weighted_screen_x_q05 = nan;
+        row.weighted_screen_x_q50 = nan;
+        row.weighted_screen_x_q95 = nan;
+        row.weighted_screen_x_q99 = nan;
+        row.weighted_screen_y_q01 = nan;
+        row.weighted_screen_y_q05 = nan;
+        row.weighted_screen_y_q50 = nan;
+        row.weighted_screen_y_q95 = nan;
+        row.weighted_screen_y_q99 = nan;
         row.weighted_screen_abs_x_q90 = nan;
         row.weighted_screen_abs_x_q95 = nan;
         row.weighted_screen_abs_x_q99 = nan;

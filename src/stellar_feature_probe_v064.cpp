@@ -1,4 +1,5 @@
 #include "stellar_feature_diagnostics_v064.h"
+#include "stellar_feature_framing_v067.h"
 #include "stellar_feature_landmarks_v066.h"
 
 #include <cerrno>
@@ -6,6 +7,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 
 namespace {
@@ -56,6 +58,20 @@ bool parseThresholds(const std::string &text, std::vector<float> *values)
   return !values->empty();
 }
 
+bool parseFeatures(
+    const std::string &text, std::vector<std::string> *features)
+{
+  features->clear();
+  std::istringstream stream(text);
+  std::string token;
+  while(std::getline(stream, token, ',')) {
+    if(token.empty())
+      return false;
+    features->push_back(token);
+  }
+  return !features->empty();
+}
+
 bool assignPositiveFloat(const char *text, float *value)
 {
   double parsed = 0.0;
@@ -82,6 +98,14 @@ int main(int argc, char **argv)
   std::string scene_path;
   std::string output_path;
   std::string landmark_output_path;
+  std::string framing_output_path;
+  StellarFeatureFramingRequestV067 framing_request = {};
+  bool has_framing_mode = false;
+  bool has_framing_features = false;
+  bool has_framing_minimum_weight = false;
+  bool has_framing_coverage = false;
+  bool has_framing_target_width = false;
+  bool has_framing_target_height = false;
   std::vector<float> thresholds = {0.01f, 0.05f, 0.10f, 0.25f, 0.50f};
   bool has_center = false;
   bool has_axis = false;
@@ -94,6 +118,47 @@ int main(int argc, char **argv)
       output_path = argv[++index];
     else if(option == "--landmark-output" && index + 1 < argc)
       landmark_output_path = argv[++index];
+    else if(option == "--framing-output" && index + 1 < argc)
+      framing_output_path = argv[++index];
+    else if(option == "--framing-mode" && index + 1 < argc) {
+      framing_request.mode = argv[++index];
+      has_framing_mode = true;
+    } else if(option == "--framing-features" && index + 1 < argc) {
+      has_framing_features = parseFeatures(
+          argv[++index], &framing_request.features);
+      if(!has_framing_features) {
+        std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR invalid framing features\n";
+        return 2;
+      }
+    } else if(option == "--framing-minimum-weight" && index + 1 < argc) {
+      has_framing_minimum_weight = parseFinite(
+          argv[++index], &framing_request.minimum_weight);
+      if(!has_framing_minimum_weight) {
+        std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR invalid framing minimum weight\n";
+        return 2;
+      }
+    } else if(option == "--framing-coverage" && index + 1 < argc) {
+      has_framing_coverage = parseFinite(
+          argv[++index], &framing_request.coverage);
+      if(!has_framing_coverage) {
+        std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR invalid framing coverage\n";
+        return 2;
+      }
+    } else if(option == "--framing-target-half-width" && index + 1 < argc) {
+      has_framing_target_width = parseFinite(
+          argv[++index], &framing_request.target_half_width_fraction);
+      if(!has_framing_target_width) {
+        std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR invalid framing target width\n";
+        return 2;
+      }
+    } else if(option == "--framing-target-half-height" && index + 1 < argc) {
+      has_framing_target_height = parseFinite(
+          argv[++index], &framing_request.target_half_height_fraction);
+      if(!has_framing_target_height) {
+        std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR invalid framing target height\n";
+        return 2;
+      }
+    }
     else if(option == "--feature-profile" && index + 1 < argc) {
       const std::string profile = argv[++index];
       if(profile == "legacy_v064")
@@ -180,23 +245,55 @@ int main(int argc, char **argv)
   for(int component = 0; component < 3; ++component)
     parameters.axis[component] /= axis_norm;
 
-  if(!landmark_output_path.empty() &&
-     (landmark_output_path == output_path || pathExists(output_path) ||
-      pathExists(landmark_output_path))) {
-    std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR refusing to overwrite "
-              << "profile or landmark output\n";
-    return 3;
+  const bool has_any_framing_option = has_framing_mode ||
+      has_framing_features || has_framing_minimum_weight ||
+      has_framing_coverage || has_framing_target_width ||
+      has_framing_target_height;
+  if((framing_output_path.empty() && has_any_framing_option) ||
+     (!framing_output_path.empty() &&
+      !(has_framing_mode && has_framing_features &&
+        has_framing_minimum_weight && has_framing_coverage &&
+        has_framing_target_width && has_framing_target_height))) {
+    std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR incomplete framing request\n";
+    return 2;
+  }
+
+  if(!landmark_output_path.empty() || !framing_output_path.empty()) {
+    std::vector<std::string> output_paths;
+    output_paths.push_back(output_path);
+    if(!landmark_output_path.empty())
+      output_paths.push_back(landmark_output_path);
+    if(!framing_output_path.empty())
+      output_paths.push_back(framing_output_path);
+    const std::set<std::string> unique_paths(
+        output_paths.begin(), output_paths.end());
+    bool any_exists = false;
+    for(std::size_t index = 0; index < output_paths.size(); ++index)
+      any_exists = any_exists || pathExists(output_paths[index]);
+    if(unique_paths.size() != output_paths.size() || any_exists) {
+      std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR refusing to overwrite "
+                << "profile, landmark, or framing output\n";
+      return 3;
+    }
   }
 
   StellarFeatureProbeSummaryV064 summary = {};
+  StellarFeatureFramingResultV067 framing_result = {};
   std::string error;
   if(!stellarProbeSceneV064(
          scene_path, parameters, thresholds, &summary, &error) ||
+     (!framing_output_path.empty() &&
+      !stellarAssessFeatureFramingV067(
+          summary, framing_request, &framing_result, &error)) ||
      !stellarWriteFeatureProbeV064(
          output_path, scene_path, parameters, summary, &error) ||
      (!landmark_output_path.empty() &&
       !stellarWriteFeatureLandmarksV066(
-          landmark_output_path, scene_path, parameters, summary, &error))) {
+          landmark_output_path, scene_path, parameters, summary, &error)) ||
+     (!framing_output_path.empty() &&
+      !stellarWriteFeatureFramingPlanV067(
+          framing_output_path, scene_path, parameters,
+          framing_request, framing_result, &error))) {
     std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR " << error << '\n';
     return 3;
   }
@@ -210,6 +307,8 @@ int main(int argc, char **argv)
             << " orthographic=1";
   if(!landmark_output_path.empty())
     std::cout << " landmark_output=" << landmark_output_path;
+  if(!framing_output_path.empty())
+    std::cout << " framing_output=" << framing_output_path;
   std::cout << '\n';
   return 0;
 }

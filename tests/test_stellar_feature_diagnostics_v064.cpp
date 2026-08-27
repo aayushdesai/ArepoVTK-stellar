@@ -244,6 +244,22 @@ int main(int argc, char **argv)
          structures_disk.weighted_screen_half_extent_q95);
   assert(structures_disk.weighted_screen_half_extent_q95 <=
          structures_disk.weighted_screen_half_extent_q99);
+  assert(structures_disk.weighted_screen_x_q01 <=
+         structures_disk.weighted_screen_x_q05);
+  assert(structures_disk.weighted_screen_x_q05 <=
+         structures_disk.weighted_screen_x_q50);
+  assert(structures_disk.weighted_screen_x_q50 <=
+         structures_disk.weighted_screen_x_q95);
+  assert(structures_disk.weighted_screen_x_q95 <=
+         structures_disk.weighted_screen_x_q99);
+  assert(structures_disk.weighted_screen_y_q01 <=
+         structures_disk.weighted_screen_y_q05);
+  assert(structures_disk.weighted_screen_y_q05 <=
+         structures_disk.weighted_screen_y_q50);
+  assert(structures_disk.weighted_screen_y_q50 <=
+         structures_disk.weighted_screen_y_q95);
+  assert(structures_disk.weighted_screen_y_q95 <=
+         structures_disk.weighted_screen_y_q99);
   assert(stellarWriteFeatureLandmarksV066(
       structures_landmarks, scene, structures_transfer, structures_summary,
       &error));
