@@ -44,6 +44,24 @@ struct StellarOpticalSample {
   float extinction_per_cm;
 };
 
+struct StellarFeatureSampleV064 {
+  float log_density;
+  float log_temperature;
+  float thermal_support;
+  float cylindrical_radius_cm;
+  float signed_height_cm;
+  float absolute_height_cm;
+  float speed_cm_per_s;
+  float radial_velocity_cm_per_s;
+  float azimuthal_velocity_cm_per_s;
+  float rotational_fraction;
+  float outward_axial_velocity_cm_per_s;
+  float outward_axial_fraction;
+  float merger_weight;
+  float disk_weight;
+  float polar_weight;
+};
+
 struct StellarIntegratedSegment {
   float radiance[3];
   float transmittance;
@@ -99,109 +117,144 @@ STELLAR_HD inline void stellarTemperatureColor(float log_temperature, float outp
         t * (colors[left + 1][channel] - colors[left][channel]);
 }
 
+STELLAR_HD inline StellarFeatureSampleV064 evaluateStellarFeatureSampleV064(
+    const StellarTransferParameters &parameters, const double position[3],
+    float density_log10_plus_10, float temperature_kelvin,
+    const float velocity_cm_per_s[3])
+{
+  StellarFeatureSampleV064 output = {};
+  if(!(temperature_kelvin > 0.0f) || !stellarFinite(temperature_kelvin) ||
+     !stellarFinite(density_log10_plus_10))
+    return output;
+
+  output.log_density = density_log10_plus_10 - 10.0f;
+  output.log_temperature = log10f(temperature_kelvin);
+  output.thermal_support =
+      stellarSmoothstep(5.7f, 6.15f, output.log_temperature) *
+      (1.0f - stellarSmoothstep(8.72f, 8.95f, output.log_temperature));
+  if(output.thermal_support <= 0.0f)
+    return output;
+
+  const double dx = stellarPeriodicDelta(
+      position[0], parameters.center[0], parameters.box_size);
+  const double dy = stellarPeriodicDelta(
+      position[1], parameters.center[1], parameters.box_size);
+  const double dz = stellarPeriodicDelta(
+      position[2], parameters.center[2], parameters.box_size);
+  const double height = dx * parameters.axis[0] +
+      dy * parameters.axis[1] + dz * parameters.axis[2];
+  const double radius_squared = dx * dx + dy * dy + dz * dz;
+  const double cylindrical_squared = radius_squared - height * height;
+  output.cylindrical_radius_cm = float(sqrt(
+      cylindrical_squared > 0.0 ? cylindrical_squared : 0.0));
+  output.signed_height_cm = float(height);
+  output.absolute_height_cm = float(fabs(height));
+
+  float relative_velocity[3];
+  float speed_squared = 0.0f;
+  float axial_velocity = 0.0f;
+  for(int component = 0; component < 3; component++) {
+    relative_velocity[component] = velocity_cm_per_s[component] -
+        parameters.bulk_velocity_cm_per_s[component];
+    speed_squared += relative_velocity[component] * relative_velocity[component];
+    axial_velocity += relative_velocity[component] *
+        float(parameters.axis[component]);
+  }
+  if(output.cylindrical_radius_cm > 1.0e6f) {
+    const double displacement[3] = {dx, dy, dz};
+    for(int component = 0; component < 3; component++) {
+      const float radial_component = float(displacement[component] -
+          height * parameters.axis[component]) /
+          output.cylindrical_radius_cm;
+      output.radial_velocity_cm_per_s +=
+          relative_velocity[component] * radial_component;
+    }
+  }
+  float azimuthal_squared = speed_squared - axial_velocity * axial_velocity -
+      output.radial_velocity_cm_per_s * output.radial_velocity_cm_per_s;
+  if(azimuthal_squared < 0.0f)
+    azimuthal_squared = 0.0f;
+  output.speed_cm_per_s = sqrtf(speed_squared);
+  output.azimuthal_velocity_cm_per_s = sqrtf(azimuthal_squared);
+  output.rotational_fraction = output.azimuthal_velocity_cm_per_s /
+      (output.speed_cm_per_s + 1.0e4f);
+  output.outward_axial_velocity_cm_per_s =
+      height >= 0.0 ? axial_velocity : -axial_velocity;
+  output.outward_axial_fraction =
+      fmaxf(0.0f, output.outward_axial_velocity_cm_per_s) /
+      (output.speed_cm_per_s + 1.0e4f);
+
+  const float merger_density =
+      stellarSmoothstep(-3.2f, 2.0f, output.log_density);
+  const float merger_radius = 1.0f - stellarSmoothstep(
+      0.78f * parameters.material_radius_cm, parameters.material_radius_cm,
+      float(sqrt(radius_squared)));
+  output.merger_weight =
+      output.thermal_support * merger_density * merger_radius;
+
+  const float disk_plane = 1.0f - stellarSmoothstep(
+      0.72f * parameters.disk_half_thickness_cm,
+      1.30f * parameters.disk_half_thickness_cm,
+      output.absolute_height_cm);
+  const float disk_radius = 1.0f - stellarSmoothstep(
+      0.78f * parameters.disk_radius_cm, 1.12f * parameters.disk_radius_cm,
+      output.cylindrical_radius_cm);
+  const float disk_density =
+      0.24f * stellarSmoothstep(-1.0f, 0.35f, output.log_density) +
+      0.76f * stellarSmoothstep(0.35f, 2.05f, output.log_density);
+  const float disk_temperature = (0.28f + 0.72f *
+      stellarSmoothstep(6.75f, 7.85f, output.log_temperature)) *
+      (1.0f - stellarSmoothstep(8.25f, 8.62f, output.log_temperature));
+  const float disk_rotation =
+      stellarSmoothstep(0.72f, 0.93f, output.rotational_fraction);
+  output.disk_weight = disk_plane * disk_radius * disk_density *
+      disk_temperature * disk_rotation;
+
+  const float cone_coordinate = output.cylindrical_radius_cm /
+      (output.absolute_height_cm + 1.0e6f);
+  const float scaled_cone = cone_coordinate / parameters.polar_cone_ratio;
+  const float axial_shape = 1.0f /
+      (1.0f + scaled_cone * scaled_cone * scaled_cone * scaled_cone);
+  const float polar_height = stellarSmoothstep(
+      0.75f * parameters.polar_inner_cm, 1.8f * parameters.polar_inner_cm,
+      output.absolute_height_cm) *
+      (1.0f - stellarSmoothstep(0.90f * parameters.polar_outer_cm,
+                               1.08f * parameters.polar_outer_cm,
+                               output.absolute_height_cm));
+  const float polar_density =
+      stellarSmoothstep(-3.4f, -0.6f, output.log_density) *
+      (1.0f - stellarSmoothstep(0.2f, 0.9f, output.log_density));
+  const float polar_temperature = (0.24f + 0.76f *
+      stellarSmoothstep(5.95f, 7.25f, output.log_temperature)) *
+      (1.0f - stellarSmoothstep(7.45f, 7.85f, output.log_temperature));
+  const float polar_speed = stellarSmoothstep(
+      5.0e7f, 4.0e8f, output.outward_axial_velocity_cm_per_s);
+  const float polar_coherence = stellarSmoothstep(
+      0.45f, 0.90f, output.outward_axial_fraction);
+  output.polar_weight = axial_shape * polar_height * polar_density *
+      polar_temperature * polar_speed * polar_coherence;
+  return output;
+}
+
 STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
     const StellarTransferParameters &parameters, const double position[3],
     float density_log10_plus_10, float temperature_kelvin,
     const float velocity_cm_per_s[3])
 {
   StellarOpticalSample output = {{0.0f, 0.0f, 0.0f}, 0.0f};
-  if(!(temperature_kelvin > 0.0f) || !stellarFinite(temperature_kelvin) ||
-     !stellarFinite(density_log10_plus_10))
+  const StellarFeatureSampleV064 feature = evaluateStellarFeatureSampleV064(
+      parameters, position, density_log10_plus_10, temperature_kelvin,
+      velocity_cm_per_s);
+  if(feature.thermal_support <= 0.0f)
     return output;
-
-  const float log_density = density_log10_plus_10 - 10.0f;
-  const float log_temperature = log10f(temperature_kelvin);
-  const float thermal_support = stellarSmoothstep(5.7f, 6.15f, log_temperature) *
-      (1.0f - stellarSmoothstep(8.72f, 8.95f, log_temperature));
-  if(thermal_support <= 0.0f)
-    return output;
-
-  const double dx = stellarPeriodicDelta(position[0], parameters.center[0], parameters.box_size);
-  const double dy = stellarPeriodicDelta(position[1], parameters.center[1], parameters.box_size);
-  const double dz = stellarPeriodicDelta(position[2], parameters.center[2], parameters.box_size);
-  const double height = dx * parameters.axis[0] + dy * parameters.axis[1] +
-      dz * parameters.axis[2];
-  const double radius_squared = dx * dx + dy * dy + dz * dz;
-  const double cylindrical_squared = radius_squared - height * height;
-  const float cylindrical_radius = float(sqrt(cylindrical_squared > 0.0 ? cylindrical_squared : 0.0));
-  const float absolute_height = float(fabs(height));
-
-  float relative_velocity[3];
-  float speed_squared = 0.0f;
-  float axial_velocity = 0.0f;
-  float radial_velocity = 0.0f;
-  for(int component = 0; component < 3; component++) {
-    relative_velocity[component] = velocity_cm_per_s[component] -
-        parameters.bulk_velocity_cm_per_s[component];
-    speed_squared += relative_velocity[component] * relative_velocity[component];
-    axial_velocity += relative_velocity[component] * float(parameters.axis[component]);
-  }
-  if(cylindrical_radius > 1.0e6f) {
-    const double displacement[3] = {dx, dy, dz};
-    for(int component = 0; component < 3; component++) {
-      const float radial_component = float(displacement[component] -
-          height * parameters.axis[component]) / cylindrical_radius;
-      radial_velocity += relative_velocity[component] * radial_component;
-    }
-  }
-  float azimuthal_squared = speed_squared - axial_velocity * axial_velocity -
-      radial_velocity * radial_velocity;
-  if(azimuthal_squared < 0.0f)
-    azimuthal_squared = 0.0f;
-  const float speed = sqrtf(speed_squared);
-  const float azimuthal_velocity = sqrtf(azimuthal_squared);
-  const float rotational_fraction = azimuthal_velocity / (speed + 1.0e4f);
-  const float outward_axial_velocity = height >= 0.0 ? axial_velocity : -axial_velocity;
-  const float outward_axial_fraction = fmaxf(0.0f, outward_axial_velocity) /
-      (speed + 1.0e4f);
-
-  const float merger_density = stellarSmoothstep(-3.2f, 2.0f, log_density);
-  const float merger_radius = 1.0f - stellarSmoothstep(
-      0.78f * parameters.material_radius_cm, parameters.material_radius_cm,
-      float(sqrt(radius_squared)));
-  const float merger_weight = thermal_support * merger_density * merger_radius;
-
-  const float disk_plane = 1.0f - stellarSmoothstep(
-      0.72f * parameters.disk_half_thickness_cm,
-      1.30f * parameters.disk_half_thickness_cm, absolute_height);
-  const float disk_radius = 1.0f - stellarSmoothstep(
-      0.78f * parameters.disk_radius_cm, 1.12f * parameters.disk_radius_cm,
-      cylindrical_radius);
-  const float disk_density = 0.24f * stellarSmoothstep(-1.0f, 0.35f, log_density) +
-      0.76f * stellarSmoothstep(0.35f, 2.05f, log_density);
-  const float disk_temperature = (0.28f + 0.72f *
-      stellarSmoothstep(6.75f, 7.85f, log_temperature)) *
-      (1.0f - stellarSmoothstep(8.25f, 8.62f, log_temperature));
-  const float disk_rotation = stellarSmoothstep(0.72f, 0.93f, rotational_fraction);
-  const float disk_weight = disk_plane * disk_radius * disk_density * disk_temperature *
-      disk_rotation;
-
-  const float cone_coordinate = cylindrical_radius / (absolute_height + 1.0e6f);
-  const float scaled_cone = cone_coordinate / parameters.polar_cone_ratio;
-  const float axial_shape = 1.0f / (1.0f + scaled_cone * scaled_cone *
-      scaled_cone * scaled_cone);
-  const float polar_height = stellarSmoothstep(
-      0.75f * parameters.polar_inner_cm, 1.8f * parameters.polar_inner_cm,
-      absolute_height) *
-      (1.0f - stellarSmoothstep(0.90f * parameters.polar_outer_cm,
-                               1.08f * parameters.polar_outer_cm, absolute_height));
-  const float polar_density = stellarSmoothstep(-3.4f, -0.6f, log_density) *
-      (1.0f - stellarSmoothstep(0.2f, 0.9f, log_density));
-  const float polar_temperature = (0.24f + 0.76f *
-      stellarSmoothstep(5.95f, 7.25f, log_temperature)) *
-      (1.0f - stellarSmoothstep(7.45f, 7.85f, log_temperature));
-  const float polar_speed = stellarSmoothstep(5.0e7f, 4.0e8f,
-                                               outward_axial_velocity);
-  const float polar_coherence = stellarSmoothstep(0.45f, 0.90f,
-                                                   outward_axial_fraction);
-  const float polar_weight = axial_shape * polar_height * polar_density *
-      polar_temperature * polar_speed * polar_coherence;
 
   float blackbody[3];
-  stellarTemperatureColor(log_temperature, blackbody);
+  stellarTemperatureColor(feature.log_temperature, blackbody);
   const StellarPaletteStyle palette = stellarPaletteStyle(parameters.palette_profile);
-  const float disk_color_fraction = stellarSmoothstep(0.20f, 1.85f, log_density);
-  const float polar_color_fraction = stellarSmoothstep(-3.0f, -0.70f, log_density);
+  const float disk_color_fraction =
+      stellarSmoothstep(0.20f, 1.85f, feature.log_density);
+  const float polar_color_fraction =
+      stellarSmoothstep(-3.0f, -0.70f, feature.log_density);
   float disk_color[3];
   float polar_color[3];
   float polar_accent_fraction = 0.0f;
@@ -209,13 +262,13 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
     polar_accent_fraction =
         stellarSmoothstep(palette.polar_accent_temperature_low,
                           palette.polar_accent_temperature_high,
-                          log_temperature) *
+                          feature.log_temperature) *
         stellarSmoothstep(palette.polar_accent_speed_low,
                           palette.polar_accent_speed_high,
-                          outward_axial_velocity) *
+                          feature.outward_axial_velocity_cm_per_s) *
         stellarSmoothstep(palette.polar_accent_coherence_low,
                           palette.polar_accent_coherence_high,
-                          outward_axial_fraction);
+                          feature.outward_axial_fraction);
   }
   for(int channel = 0; channel < 3; channel++) {
     const float disk_density_color = palette.disk_low_density[channel] +
@@ -239,15 +292,15 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
   float disk_mix = 0.0f;
   float polar_mix = 0.0f;
   if(parameters.mode == STELLAR_TRANSFER_MERGER)
-    merger_mix = merger_weight;
+    merger_mix = feature.merger_weight;
   else if(parameters.mode == STELLAR_TRANSFER_DISK)
-    disk_mix = disk_weight;
+    disk_mix = feature.disk_weight;
   else if(parameters.mode == STELLAR_TRANSFER_OUTFLOW)
-    polar_mix = polar_weight;
+    polar_mix = feature.polar_weight;
   else {
-    merger_mix = palette.composite_merger_weight * merger_weight;
-    disk_mix = palette.composite_disk_weight * disk_weight;
-    polar_mix = palette.composite_polar_weight * polar_weight;
+    merger_mix = palette.composite_merger_weight * feature.merger_weight;
+    disk_mix = palette.composite_disk_weight * feature.disk_weight;
+    polar_mix = palette.composite_polar_weight * feature.polar_weight;
   }
 
   const float total = merger_mix + disk_mix + polar_mix;
