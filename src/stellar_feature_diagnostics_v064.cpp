@@ -57,12 +57,8 @@ bool normalize3(double value[3], double *length)
 struct ProjectionV064 {
   double origin[3];
   double direction[3];
-  double x_axis[3];
-  double y_axis[3];
-  double x_step;
-  double y_step;
-  uint32_t reference_x;
-  uint32_t reference_y;
+  double pixel_x_dual[3];
+  double pixel_y_dual[3];
 };
 
 bool inferProjection(const std::vector<ArepoStellarRay> &rays,
@@ -72,52 +68,139 @@ bool inferProjection(const std::vector<ArepoStellarRay> &rays,
   if(!projection || width < 2 || height < 2 ||
      rays.size() != uint64_t(width) * uint64_t(height))
     return false;
-  int reference = -1;
+  uint64_t active_count = 0;
+  double mean_x = 0.0;
+  double mean_y = 0.0;
+  double mean_origin[3] = {0.0, 0.0, 0.0};
+  double direction_sum[3] = {0.0, 0.0, 0.0};
+  double reference_direction[3] = {0.0, 0.0, 0.0};
+  bool has_reference_direction = false;
   for(std::size_t index = 0; index < rays.size(); ++index)
     if(rays[index].active) {
-      reference = int(index);
-      break;
+      double direction[3] = {rays[index].direction[0],
+                             rays[index].direction[1],
+                             rays[index].direction[2]};
+      if(!normalize3(direction, 0))
+        return false;
+      if(!has_reference_direction) {
+        for(int component = 0; component < 3; ++component)
+          reference_direction[component] = direction[component];
+        has_reference_direction = true;
+      }
+      if(dot3(direction, reference_direction) < 0.0)
+        for(int component = 0; component < 3; ++component)
+          direction[component] = -direction[component];
+      const uint32_t x = uint32_t(uint64_t(index) % width);
+      const uint32_t y = uint32_t(uint64_t(index) / width);
+      ++active_count;
+      mean_x += x;
+      mean_y += y;
+      for(int component = 0; component < 3; ++component) {
+        mean_origin[component] += rays[index].origin[component];
+        direction_sum[component] += direction[component];
+      }
     }
-  if(reference < 0)
+  if(active_count < 4)
     return false;
-  projection->reference_x = uint32_t(reference) % width;
-  projection->reference_y = uint32_t(reference) / width;
+  mean_x /= active_count;
+  mean_y /= active_count;
   for(int component = 0; component < 3; ++component) {
-    projection->origin[component] = rays[reference].origin[component];
-    projection->direction[component] = rays[reference].direction[component];
+    mean_origin[component] /= active_count;
+    projection->direction[component] = direction_sum[component];
   }
   if(!normalize3(projection->direction, 0))
     return false;
 
-  bool found_x = false;
-  for(uint32_t y = 0; y < height && !found_x; ++y)
-    for(uint32_t x = 0; x + 1 < width && !found_x; ++x) {
-      const ArepoStellarRay &left = rays[uint64_t(y) * width + x];
-      const ArepoStellarRay &right = rays[uint64_t(y) * width + x + 1];
-      if(!left.active || !right.active)
-        continue;
-      for(int component = 0; component < 3; ++component)
-        projection->x_axis[component] =
-            right.origin[component] - left.origin[component];
-      found_x = normalize3(projection->x_axis, &projection->x_step);
+  double covariance_xx = 0.0;
+  double covariance_xy = 0.0;
+  double covariance_yy = 0.0;
+  double origin_covariance_x[3] = {0.0, 0.0, 0.0};
+  double origin_covariance_y[3] = {0.0, 0.0, 0.0};
+  for(std::size_t index = 0; index < rays.size(); ++index) {
+    if(!rays[index].active)
+      continue;
+    const double centered_x = double(uint64_t(index) % width) - mean_x;
+    const double centered_y = double(uint64_t(index) / width) - mean_y;
+    covariance_xx += centered_x * centered_x;
+    covariance_xy += centered_x * centered_y;
+    covariance_yy += centered_y * centered_y;
+    for(int component = 0; component < 3; ++component) {
+      const double centered_origin =
+          rays[index].origin[component] - mean_origin[component];
+      origin_covariance_x[component] += centered_x * centered_origin;
+      origin_covariance_y[component] += centered_y * centered_origin;
     }
-  bool found_y = false;
-  for(uint32_t y = 0; y + 1 < height && !found_y; ++y)
-    for(uint32_t x = 0; x < width && !found_y; ++x) {
-      const ArepoStellarRay &bottom = rays[uint64_t(y) * width + x];
-      const ArepoStellarRay &top = rays[uint64_t(y + 1) * width + x];
-      if(!bottom.active || !top.active)
-        continue;
-      for(int component = 0; component < 3; ++component)
-        projection->y_axis[component] =
-            top.origin[component] - bottom.origin[component];
-      found_y = normalize3(projection->y_axis, &projection->y_step);
-    }
-  if(!found_x || !found_y ||
-     std::fabs(dot3(projection->x_axis, projection->y_axis)) > 1.0e-5 ||
-     std::fabs(dot3(projection->x_axis, projection->direction)) > 1.0e-5 ||
-     std::fabs(dot3(projection->y_axis, projection->direction)) > 1.0e-5)
+  }
+  const double covariance_determinant =
+      covariance_xx * covariance_yy - covariance_xy * covariance_xy;
+  if(!(covariance_determinant > 0.0) ||
+     !std::isfinite(covariance_determinant))
     return false;
+
+  double fitted_x[3];
+  double fitted_y[3];
+  for(int component = 0; component < 3; ++component) {
+    fitted_x[component] =
+        (origin_covariance_x[component] * covariance_yy -
+         origin_covariance_y[component] * covariance_xy) /
+        covariance_determinant;
+    fitted_y[component] =
+        (origin_covariance_y[component] * covariance_xx -
+         origin_covariance_x[component] * covariance_xy) /
+        covariance_determinant;
+    projection->origin[component] = mean_origin[component] -
+        mean_x * fitted_x[component] - mean_y * fitted_y[component];
+  }
+
+  double residual_squared = 0.0;
+  double maximum_residual = 0.0;
+  for(std::size_t index = 0; index < rays.size(); ++index) {
+    if(!rays[index].active)
+      continue;
+    const double x = uint64_t(index) % width;
+    const double y = uint64_t(index) / width;
+    double squared = 0.0;
+    for(int component = 0; component < 3; ++component) {
+      const double predicted = projection->origin[component] +
+          x * fitted_x[component] + y * fitted_y[component];
+      const double residual = rays[index].origin[component] - predicted;
+      squared += residual * residual;
+    }
+    residual_squared += squared;
+    maximum_residual = std::max(maximum_residual, std::sqrt(squared));
+  }
+
+  const double fitted_x_direction = dot3(fitted_x, projection->direction);
+  const double fitted_y_direction = dot3(fitted_y, projection->direction);
+  for(int component = 0; component < 3; ++component) {
+    fitted_x[component] -= fitted_x_direction *
+        projection->direction[component];
+    fitted_y[component] -= fitted_y_direction *
+        projection->direction[component];
+  }
+  const double fitted_x_squared = dot3(fitted_x, fitted_x);
+  const double fitted_y_squared = dot3(fitted_y, fitted_y);
+  const double fitted_xy = dot3(fitted_x, fitted_y);
+  const double grid_determinant =
+      fitted_x_squared * fitted_y_squared - fitted_xy * fitted_xy;
+  const double minimum_step = std::sqrt(
+      std::min(fitted_x_squared, fitted_y_squared));
+  const double rms_residual = std::sqrt(residual_squared / active_count);
+  if(!(fitted_x_squared > 0.0) || !(fitted_y_squared > 0.0) ||
+     !(grid_determinant > 0.0) || !(minimum_step > 0.0) ||
+     std::fabs(fitted_xy) /
+         std::sqrt(fitted_x_squared * fitted_y_squared) > 0.01 ||
+     rms_residual > 0.02 * minimum_step ||
+     maximum_residual > 0.10 * minimum_step)
+    return false;
+  for(int component = 0; component < 3; ++component) {
+    projection->pixel_x_dual[component] =
+        (fitted_y_squared * fitted_x[component] -
+         fitted_xy * fitted_y[component]) / grid_determinant;
+    projection->pixel_y_dual[component] =
+        (fitted_x_squared * fitted_y[component] -
+         fitted_xy * fitted_x[component]) / grid_determinant;
+  }
 
   for(std::size_t index = 0; index < rays.size(); ++index) {
     if(!rays[index].active)
@@ -319,10 +402,8 @@ bool stellarProbeSceneV064(
         for(int component = 0; component < 3; ++component)
           delta[component] = cells[cell_index].position[component] -
               projection.origin[component];
-        const double pixel_x = projection.reference_x +
-            dot3(delta, projection.x_axis) / projection.x_step;
-        const double pixel_y = projection.reference_y +
-            dot3(delta, projection.y_axis) / projection.y_step;
+        const double pixel_x = dot3(delta, projection.pixel_x_dual);
+        const double pixel_y = dot3(delta, projection.pixel_y_dual);
         min_x = std::min(min_x, pixel_x);
         max_x = std::max(max_x, pixel_x);
         min_y = std::min(min_y, pixel_y);

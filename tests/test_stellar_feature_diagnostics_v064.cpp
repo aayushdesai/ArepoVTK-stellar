@@ -45,7 +45,21 @@ ArepoStellarCell cell(double x, double y, double z, float density,
   return value;
 }
 
-void writeScene(const std::string &path)
+double dot(const double first[3], const double second[3])
+{
+  return first[0] * second[0] + first[1] * second[1] +
+      first[2] * second[2];
+}
+
+void normalize(double value[3])
+{
+  const double length = std::sqrt(dot(value, value));
+  assert(length > 0.0);
+  for(int component = 0; component < 3; ++component)
+    value[component] /= length;
+}
+
+void writeScene(const std::string &path, bool quantized_large_origin)
 {
   ArepoStellarSceneHeader header = {};
   std::memcpy(header.magic, AREPO_STELLAR_SCENE_MAGIC,
@@ -83,18 +97,53 @@ void writeScene(const std::string &path)
                        0.0f, 0.0f, -2.0e8f, 4));
   std::vector<uint64_t> offsets(header.num_cells + 1, 0);
   std::vector<ArepoStellarRay> rays(header.num_rays);
+  double direction[3] = {0.21, -0.31, 0.927};
+  normalize(direction);
+  double x_axis[3] = {direction[2], 0.0, -direction[0]};
+  normalize(x_axis);
+  double y_axis[3] = {
+      direction[1] * x_axis[2] - direction[2] * x_axis[1],
+      direction[2] * x_axis[0] - direction[0] * x_axis[2],
+      direction[0] * x_axis[1] - direction[1] * x_axis[0]};
+  normalize(y_axis);
+  const double large_origin[3] = {8.0e12, -6.0e12, 4.0e12};
   for(uint32_t y = 0; y < header.sample_height; ++y)
     for(uint32_t x = 0; x < header.sample_width; ++x) {
       ArepoStellarRay &ray = rays[uint64_t(y) * header.sample_width + x];
       std::memset(&ray, 0, sizeof(ray));
-      ray.origin[0] = -5.0e10;
-      ray.origin[1] = (double(x) - 1.5) * 2.0e10;
-      ray.origin[2] = (double(y) - 1.5) * 2.0e10;
-      ray.direction[0] = 1.0;
+      if(quantized_large_origin) {
+        for(int component = 0; component < 3; ++component) {
+          const double value = large_origin[component] +
+              (double(x) - 1.5) * 2.0e9 * x_axis[component] +
+              (double(y) - 1.5) * 2.0e9 * y_axis[component];
+          ray.origin[component] = double(float(value));
+          ray.direction[component] = direction[component];
+        }
+      } else {
+        ray.origin[0] = -5.0e10;
+        ray.origin[1] = (double(x) - 1.5) * 2.0e10;
+        ray.origin[2] = (double(y) - 1.5) * 2.0e10;
+        ray.direction[0] = 1.0;
+      }
       ray.t_max = 1.0e11;
       ray.start_cell = 0;
       ray.active = 1;
     }
+  if(quantized_large_origin) {
+    double adjacent_x[3];
+    double adjacent_y[3];
+    for(int component = 0; component < 3; ++component) {
+      adjacent_x[component] = rays[1].origin[component] -
+          rays[0].origin[component];
+      adjacent_y[component] = rays[4].origin[component] -
+          rays[0].origin[component];
+    }
+    normalize(adjacent_x);
+    normalize(adjacent_y);
+    assert(std::fabs(dot(adjacent_x, adjacent_y)) > 1.0e-5 ||
+           std::fabs(dot(adjacent_x, direction)) > 1.0e-5 ||
+           std::fabs(dot(adjacent_y, direction)) > 1.0e-5);
+  }
 
   std::ofstream output(path.c_str(), std::ios::binary);
   assert(output.good());
@@ -127,8 +176,11 @@ int main(int argc, char **argv)
   assert(argc == 2);
   const std::string root = argv[1];
   const std::string scene = root + "/feature_scene_v064.bin";
+  const std::string quantized_scene =
+      root + "/feature_scene_quantized_v064.bin";
   const std::string report = root + "/feature_report_v064.tsv";
-  writeScene(scene);
+  writeScene(scene, false);
+  writeScene(quantized_scene, true);
 
   const StellarTransferParameters transfer = parameters();
   const double core_position[3] = {0.0, 2.0e9, 0.0};
@@ -153,6 +205,12 @@ int main(int argc, char **argv)
   assert(summary.cells == 4);
   assert(summary.rays == 16);
   assert(summary.rows.size() == 5);
+  StellarFeatureProbeSummaryV064 quantized_summary = {};
+  assert(stellarProbeSceneV064(
+      quantized_scene, transfer, std::vector<float>(1, 0.01f),
+      &quantized_summary, &error));
+  assert(quantized_summary.rows.size() == 5);
+  assert(quantized_summary.orthographic_projection);
   const StellarFeatureProbeRowV064 &disk = row(summary, "disk");
   const StellarFeatureProbeRowV064 &positive = row(summary, "polar_positive");
   const StellarFeatureProbeRowV064 &negative = row(summary, "polar_negative");

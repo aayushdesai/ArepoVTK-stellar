@@ -35,8 +35,12 @@ default is `0.01,0.05,0.10,0.25,0.50`.
 
 The implementation rejects malformed geometry, non-finite cell fields,
 non-orthographic ray grids, unsupported units, truncated scenes, and an
-existing output path. It does not read an AREPO snapshot and does not traverse
-the mesh.
+existing output path. Orthographic inference fits an affine two-dimensional
+lattice over every active ray origin, projects the fitted lattice into the mean
+ray plane, and uses its dual basis for stable pixel coordinates. Residual and
+skew limits still reject malformed grids, while avoiding sensitivity to one
+adjacent origin pair quantized at a large absolute coordinate. It does not read
+an AREPO snapshot and does not traverse the mesh.
 
 ## Output
 
@@ -60,6 +64,7 @@ Phase 15 validation requires:
 
 - exact retained beauty-image hashes and an empty Voronoi reference diff;
 - deterministic repeated probe fixtures;
+- large-coordinate ray-origin quantization without false grid rejection;
 - explicit evidence that the legacy disk selector can overlap merger/core
   material;
 - separate positive and negative polar support;
