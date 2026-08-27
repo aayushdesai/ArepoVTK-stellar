@@ -1,8 +1,10 @@
 #include "stellar_feature_diagnostics_v064.h"
+#include "stellar_feature_landmarks_v066.h"
 
 #include <cerrno>
 #include <cmath>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 
@@ -63,6 +65,12 @@ bool assignPositiveFloat(const char *text, float *value)
   return std::isfinite(*value) && *value > 0.0f;
 }
 
+bool pathExists(const std::string &path)
+{
+  std::ifstream input(path.c_str());
+  return input.good();
+}
+
 } // namespace
 
 int main(int argc, char **argv)
@@ -73,6 +81,7 @@ int main(int argc, char **argv)
   parameters.feature_profile = STELLAR_FEATURE_LEGACY_V064;
   std::string scene_path;
   std::string output_path;
+  std::string landmark_output_path;
   std::vector<float> thresholds = {0.01f, 0.05f, 0.10f, 0.25f, 0.50f};
   bool has_center = false;
   bool has_axis = false;
@@ -83,6 +92,8 @@ int main(int argc, char **argv)
       scene_path = argv[++index];
     else if(option == "--output" && index + 1 < argc)
       output_path = argv[++index];
+    else if(option == "--landmark-output" && index + 1 < argc)
+      landmark_output_path = argv[++index];
     else if(option == "--feature-profile" && index + 1 < argc) {
       const std::string profile = argv[++index];
       if(profile == "legacy_v064")
@@ -169,12 +180,23 @@ int main(int argc, char **argv)
   for(int component = 0; component < 3; ++component)
     parameters.axis[component] /= axis_norm;
 
+  if(!landmark_output_path.empty() &&
+     (landmark_output_path == output_path || pathExists(output_path) ||
+      pathExists(landmark_output_path))) {
+    std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR refusing to overwrite "
+              << "profile or landmark output\n";
+    return 3;
+  }
+
   StellarFeatureProbeSummaryV064 summary = {};
   std::string error;
   if(!stellarProbeSceneV064(
          scene_path, parameters, thresholds, &summary, &error) ||
      !stellarWriteFeatureProbeV064(
-         output_path, scene_path, parameters, summary, &error)) {
+         output_path, scene_path, parameters, summary, &error) ||
+     (!landmark_output_path.empty() &&
+      !stellarWriteFeatureLandmarksV066(
+          landmark_output_path, scene_path, parameters, summary, &error))) {
     std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR " << error << '\n';
     return 3;
   }
@@ -185,6 +207,9 @@ int main(int argc, char **argv)
             << " cells=" << summary.cells
             << " rays=" << summary.rays
             << " rows=" << summary.rows.size()
-            << " orthographic=1\n";
+            << " orthographic=1";
+  if(!landmark_output_path.empty())
+    std::cout << " landmark_output=" << landmark_output_path;
+  std::cout << '\n';
   return 0;
 }

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "stellar_feature_diagnostics_v064.h"
+#include "stellar_feature_landmarks_v066.h"
 #include "stellar_gpu_scene_format_v052.h"
 
 namespace {
@@ -182,6 +183,9 @@ int main(int argc, char **argv)
   const std::string report = root + "/feature_report_v064.tsv";
   const std::string structures_report =
       root + "/feature_report_structures_v065.tsv";
+  const std::string landmarks = root + "/feature_landmarks_v066.tsv";
+  const std::string structures_landmarks =
+      root + "/feature_landmarks_structures_v066.tsv";
   writeScene(scene, false);
   writeScene(quantized_scene, true);
 
@@ -236,6 +240,17 @@ int main(int argc, char **argv)
   assert(structures_disk.selected_cells == 1);
   assert(structures_disk.weighted_inner_radius_fraction == 0.0);
   assert(structures_disk.weighted_high_density_fraction == 0.0);
+  assert(structures_disk.weighted_screen_half_extent_q90 <=
+         structures_disk.weighted_screen_half_extent_q95);
+  assert(structures_disk.weighted_screen_half_extent_q95 <=
+         structures_disk.weighted_screen_half_extent_q99);
+  assert(stellarWriteFeatureLandmarksV066(
+      structures_landmarks, scene, structures_transfer, structures_summary,
+      &error));
+  assert(stellarWriteFeatureLandmarksV066(
+      landmarks, scene, transfer, summary, &error));
+  assert(!stellarWriteFeatureLandmarksV066(
+      landmarks, scene, transfer, summary, &error));
   assert(stellarWriteFeatureProbeV064(
       structures_report, scene, structures_transfer, structures_summary,
       &error));

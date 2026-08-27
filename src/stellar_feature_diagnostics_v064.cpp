@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "stellar_gpu_scene_format_v052.h"
+#include "stellar_feature_landmarks_v066.h"
 
 namespace {
 
@@ -214,28 +215,10 @@ bool inferProjection(const std::vector<ArepoStellarRay> &rays,
   return true;
 }
 
-struct WeightedValueV064 {
-  double value;
-  double weight;
-};
-
-double weightedMedian(std::vector<WeightedValueV064> values,
+double weightedMedian(std::vector<StellarWeightedValueV066> values,
                       double total_weight)
 {
-  if(values.empty() || !(total_weight > 0.0))
-    return std::numeric_limits<double>::quiet_NaN();
-  std::sort(values.begin(), values.end(),
-            [](const WeightedValueV064 &first,
-               const WeightedValueV064 &second) {
-              return first.value < second.value;
-            });
-  double cumulative = 0.0;
-  for(std::size_t index = 0; index < values.size(); ++index) {
-    cumulative += values[index].weight;
-    if(cumulative >= 0.5 * total_weight)
-      return values[index].value;
-  }
-  return values.back().value;
+  return stellarWeightedQuantileV066(values, total_weight, 0.5);
 }
 
 float featureWeight(const StellarFeatureSampleV064 &sample, int feature)
@@ -375,10 +358,17 @@ bool stellarProbeSceneV064(
       double max_x = -std::numeric_limits<double>::infinity();
       double min_y = std::numeric_limits<double>::infinity();
       double max_y = -std::numeric_limits<double>::infinity();
-      std::vector<WeightedValueV064> density_values;
-      std::vector<WeightedValueV064> radius_values;
-      std::vector<WeightedValueV064> height_values;
-      std::vector<WeightedValueV064> rotation_values;
+      std::vector<StellarWeightedValueV066> density_values;
+      std::vector<StellarWeightedValueV066> radius_values;
+      std::vector<StellarWeightedValueV066> height_values;
+      std::vector<StellarWeightedValueV066> polar_height_values;
+      std::vector<StellarWeightedValueV066> rotation_values;
+      std::vector<StellarWeightedValueV066> screen_abs_x_values;
+      std::vector<StellarWeightedValueV066> screen_abs_y_values;
+      std::vector<StellarWeightedValueV066> screen_half_extent_values;
+      double weighted_screen_x = 0.0;
+      double weighted_screen_y = 0.0;
+      double weighted_signed_height = 0.0;
       for(std::size_t cell_index = 0; cell_index < cells.size(); ++cell_index) {
         const StellarFeatureSampleV064 &feature = features[cell_index];
         const float weight = featureWeight(feature, feature_index);
@@ -397,6 +387,8 @@ bool stellarProbeSceneV064(
         height_values.push_back({
             feature.absolute_height_cm / parameters.disk_half_thickness_cm,
             weight});
+        polar_height_values.push_back({
+            feature.absolute_height_cm / parameters.polar_outer_cm, weight});
         rotation_values.push_back({feature.rotational_fraction, weight});
 
         double delta[3];
@@ -405,6 +397,22 @@ bool stellarProbeSceneV064(
               projection.origin[component];
         const double pixel_x = dot3(delta, projection.pixel_x_dual);
         const double pixel_y = dot3(delta, projection.pixel_y_dual);
+        const double half_width = std::max(
+            0.5, 0.5 * double(header.sample_width - 1));
+        const double half_height = std::max(
+            0.5, 0.5 * double(header.sample_height - 1));
+        const double screen_x =
+            (pixel_x - 0.5 * double(header.sample_width - 1)) / half_width;
+        const double screen_y =
+            (pixel_y - 0.5 * double(header.sample_height - 1)) / half_height;
+        weighted_screen_x += weight * screen_x;
+        weighted_screen_y += weight * screen_y;
+        weighted_signed_height += weight * feature.signed_height_cm /
+            parameters.polar_outer_cm;
+        screen_abs_x_values.push_back({std::fabs(screen_x), weight});
+        screen_abs_y_values.push_back({std::fabs(screen_y), weight});
+        screen_half_extent_values.push_back({
+            std::max(std::fabs(screen_x), std::fabs(screen_y)), weight});
         min_x = std::min(min_x, pixel_x);
         max_x = std::max(max_x, pixel_x);
         min_y = std::min(min_y, pixel_y);
@@ -422,6 +430,48 @@ bool stellarProbeSceneV064(
             weightedMedian(height_values, row.selected_weight);
         row.weighted_median_rotational_fraction =
             weightedMedian(rotation_values, row.selected_weight);
+        row.weighted_screen_center_x_fraction =
+            weighted_screen_x / row.selected_weight;
+        row.weighted_screen_center_y_fraction =
+            weighted_screen_y / row.selected_weight;
+        row.weighted_screen_abs_x_q90 = stellarWeightedQuantileV066(
+            screen_abs_x_values, row.selected_weight, 0.90);
+        row.weighted_screen_abs_x_q95 = stellarWeightedQuantileV066(
+            screen_abs_x_values, row.selected_weight, 0.95);
+        row.weighted_screen_abs_x_q99 = stellarWeightedQuantileV066(
+            screen_abs_x_values, row.selected_weight, 0.99);
+        row.weighted_screen_abs_y_q90 = stellarWeightedQuantileV066(
+            screen_abs_y_values, row.selected_weight, 0.90);
+        row.weighted_screen_abs_y_q95 = stellarWeightedQuantileV066(
+            screen_abs_y_values, row.selected_weight, 0.95);
+        row.weighted_screen_abs_y_q99 = stellarWeightedQuantileV066(
+            screen_abs_y_values, row.selected_weight, 0.99);
+        row.weighted_screen_half_extent_q90 = stellarWeightedQuantileV066(
+            screen_half_extent_values, row.selected_weight, 0.90);
+        row.weighted_screen_half_extent_q95 = stellarWeightedQuantileV066(
+            screen_half_extent_values, row.selected_weight, 0.95);
+        row.weighted_screen_half_extent_q99 = stellarWeightedQuantileV066(
+            screen_half_extent_values, row.selected_weight, 0.99);
+        row.weighted_radius_over_disk_radius_q90 =
+            stellarWeightedQuantileV066(
+                radius_values, row.selected_weight, 0.90);
+        row.weighted_radius_over_disk_radius_q95 =
+            stellarWeightedQuantileV066(
+                radius_values, row.selected_weight, 0.95);
+        row.weighted_radius_over_disk_radius_q99 =
+            stellarWeightedQuantileV066(
+                radius_values, row.selected_weight, 0.99);
+        row.weighted_absolute_height_over_polar_outer_q90 =
+            stellarWeightedQuantileV066(
+                polar_height_values, row.selected_weight, 0.90);
+        row.weighted_absolute_height_over_polar_outer_q95 =
+            stellarWeightedQuantileV066(
+                polar_height_values, row.selected_weight, 0.95);
+        row.weighted_absolute_height_over_polar_outer_q99 =
+            stellarWeightedQuantileV066(
+                polar_height_values, row.selected_weight, 0.99);
+        row.weighted_signed_height_center_over_polar_outer =
+            weighted_signed_height / row.selected_weight;
         row.projected_width_fraction = (max_x - min_x) /
             std::max(1.0, double(header.sample_width - 1));
         row.projected_height_fraction = (max_y - min_y) /
@@ -443,6 +493,24 @@ bool stellarProbeSceneV064(
         row.weighted_median_radius_over_disk_radius = nan;
         row.weighted_median_absolute_height_over_disk_thickness = nan;
         row.weighted_median_rotational_fraction = nan;
+        row.weighted_screen_center_x_fraction = nan;
+        row.weighted_screen_center_y_fraction = nan;
+        row.weighted_screen_abs_x_q90 = nan;
+        row.weighted_screen_abs_x_q95 = nan;
+        row.weighted_screen_abs_x_q99 = nan;
+        row.weighted_screen_abs_y_q90 = nan;
+        row.weighted_screen_abs_y_q95 = nan;
+        row.weighted_screen_abs_y_q99 = nan;
+        row.weighted_screen_half_extent_q90 = nan;
+        row.weighted_screen_half_extent_q95 = nan;
+        row.weighted_screen_half_extent_q99 = nan;
+        row.weighted_radius_over_disk_radius_q90 = nan;
+        row.weighted_radius_over_disk_radius_q95 = nan;
+        row.weighted_radius_over_disk_radius_q99 = nan;
+        row.weighted_absolute_height_over_polar_outer_q90 = nan;
+        row.weighted_absolute_height_over_polar_outer_q95 = nan;
+        row.weighted_absolute_height_over_polar_outer_q99 = nan;
+        row.weighted_signed_height_center_over_polar_outer = nan;
         row.projected_width_fraction = nan;
         row.projected_height_fraction = nan;
         row.projected_max_fraction = nan;
