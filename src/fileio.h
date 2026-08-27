@@ -66,6 +66,7 @@ public:
   bool stellarTransferEnabled;
   string stellarTransferMode;
   string stellarPaletteProfile;
+  string stellarFeatureProfile;
   int stellarReconstructionMode;
   float stellarIdwPower, stellarSphSupportFactor;
   float stellarCenter[3], stellarAxis[3];

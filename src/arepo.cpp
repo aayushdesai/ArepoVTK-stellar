@@ -379,6 +379,9 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
     stellarParameters.palette_profile = STELLAR_PALETTE_COPPER_BLUE_V057;
   if(Config.stellarPaletteProfile == "copper_blue_accent_v058")
     stellarParameters.palette_profile = STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058;
+  stellarParameters.feature_profile = STELLAR_FEATURE_LEGACY_V064;
+  if(Config.stellarFeatureProfile == "stellar_structures_v065")
+    stellarParameters.feature_profile = STELLAR_FEATURE_STRUCTURES_V065;
   const double axisNorm = sqrt(Config.stellarAxis[0] * Config.stellarAxis[0] +
                                Config.stellarAxis[1] * Config.stellarAxis[1] +
                                Config.stellarAxis[2] * Config.stellarAxis[2]);
@@ -402,6 +405,22 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarParameters.polar_emissivity_per_cm = Config.stellarPolarEmission;
 
   if(ThisTask == 0 && Config.stellarTransferEnabled) {
+    const StellarFeatureProfileStyleV065 featureStyle =
+        stellarFeatureProfileStyleV065(stellarParameters.feature_profile);
+    cerr << "STELLAR_FEATURE_PROFILE_V065 profile="
+         << stellarFeatureProfileNameV065(stellarParameters.feature_profile)
+         << " id=" << stellarParameters.feature_profile
+         << " disk_inner_fraction="
+         << featureStyle.disk_inner_start_fraction << ","
+         << featureStyle.disk_inner_full_fraction
+         << " disk_density_taper="
+         << featureStyle.disk_density_taper_low << ","
+         << featureStyle.disk_density_taper_high
+         << " disk_density_floor=" << featureStyle.disk_density_floor
+         << " polar_confidence=" << featureStyle.polar_confidence_low << ","
+         << featureStyle.polar_confidence_high
+         << " polar_envelope_floor=" << featureStyle.polar_envelope_floor
+         << endl;
     const StellarPaletteStyle palette =
         stellarPaletteStyle(stellarParameters.palette_profile);
     cerr << (stellarParameters.palette_profile ==

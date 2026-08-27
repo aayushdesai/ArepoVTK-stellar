@@ -17,6 +17,7 @@ StellarTransferParameters parameters()
   StellarTransferParameters value = {};
   value.mode = STELLAR_TRANSFER_COMPOSITE;
   value.palette_profile = STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058;
+  value.feature_profile = STELLAR_FEATURE_LEGACY_V064;
   value.axis[2] = 1.0;
   value.box_size = 1.0e12;
   value.material_radius_cm = 2.0e10f;
@@ -179,6 +180,8 @@ int main(int argc, char **argv)
   const std::string quantized_scene =
       root + "/feature_scene_quantized_v064.bin";
   const std::string report = root + "/feature_report_v064.tsv";
+  const std::string structures_report =
+      root + "/feature_report_structures_v065.tsv";
   writeScene(scene, false);
   writeScene(quantized_scene, true);
 
@@ -222,6 +225,20 @@ int main(int argc, char **argv)
   assert(negative.selected_cells == 1);
   assert(positive.right_censored);
   assert(negative.right_censored);
+  StellarTransferParameters structures_transfer = transfer;
+  structures_transfer.feature_profile = STELLAR_FEATURE_STRUCTURES_V065;
+  StellarFeatureProbeSummaryV064 structures_summary = {};
+  assert(stellarProbeSceneV064(
+      scene, structures_transfer, std::vector<float>(1, 0.01f),
+      &structures_summary, &error));
+  const StellarFeatureProbeRowV064 &structures_disk =
+      row(structures_summary, "disk");
+  assert(structures_disk.selected_cells == 1);
+  assert(structures_disk.weighted_inner_radius_fraction == 0.0);
+  assert(structures_disk.weighted_high_density_fraction == 0.0);
+  assert(stellarWriteFeatureProbeV064(
+      structures_report, scene, structures_transfer, structures_summary,
+      &error));
   assert(stellarWriteFeatureProbeV064(
       report, scene, transfer, summary, &error));
   assert(!stellarWriteFeatureProbeV064(

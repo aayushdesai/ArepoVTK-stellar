@@ -119,6 +119,8 @@ void ConfigSet::ReadFile(string cfgfile)
   stellarTransferMode = readValue<string>("stellarTransferMode", "merger");
   stellarPaletteProfile =
       readValue<string>("stellarPaletteProfile", "legacy_v052");
+  stellarFeatureProfile =
+      readValue<string>("stellarFeatureProfile", "legacy_v064");
   const string stellarReconstruction =
       readValue<string>("stellarReconstruction", "sph");
   if (stellarReconstruction == "sph")
@@ -207,6 +209,9 @@ void ConfigSet::ReadFile(string cfgfile)
         stellarPaletteProfile != "copper_blue_v057" &&
         stellarPaletteProfile != "copper_blue_accent_v058")
       terminate("Config: unknown stellarPaletteProfile.");
+    if (stellarFeatureProfile != "legacy_v064" &&
+        stellarFeatureProfile != "stellar_structures_v065")
+      terminate("Config: unknown stellarFeatureProfile.");
     if (!(stellarIdwPower > 0.0f) || !(stellarSphSupportFactor > 0.0f))
       terminate("Config: invalid stellar reconstruction parameter.");
     const float axisNorm = sqrt(stellarAxis[0] * stellarAxis[0] +

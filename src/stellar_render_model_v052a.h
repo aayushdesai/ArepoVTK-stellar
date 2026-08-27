@@ -10,6 +10,7 @@
 #endif
 
 #include "stellar_palette_v057.h"
+#include "stellar_feature_profile_v065.h"
 
 enum StellarTransferMode {
   STELLAR_TRANSFER_MERGER = 0,
@@ -21,6 +22,7 @@ enum StellarTransferMode {
 struct StellarTransferParameters {
   int mode;
   int palette_profile;
+  int feature_profile;
   double center[3];
   double axis[3];
   double box_size;
@@ -60,6 +62,9 @@ struct StellarFeatureSampleV064 {
   float merger_weight;
   float disk_weight;
   float polar_weight;
+  float disk_annulus_support;
+  float disk_density_retention;
+  float polar_confidence_retention;
 };
 
 struct StellarIntegratedSegment {
@@ -209,6 +214,8 @@ STELLAR_HD inline StellarFeatureSampleV064 evaluateStellarFeatureSampleV064(
       stellarSmoothstep(0.72f, 0.93f, output.rotational_fraction);
   output.disk_weight = disk_plane * disk_radius * disk_density *
       disk_temperature * disk_rotation;
+  output.disk_annulus_support = 1.0f;
+  output.disk_density_retention = 1.0f;
 
   const float cone_coordinate = output.cylindrical_radius_cm /
       (output.absolute_height_cm + 1.0e6f);
@@ -233,6 +240,27 @@ STELLAR_HD inline StellarFeatureSampleV064 evaluateStellarFeatureSampleV064(
       0.45f, 0.90f, output.outward_axial_fraction);
   output.polar_weight = axial_shape * polar_height * polar_density *
       polar_temperature * polar_speed * polar_coherence;
+  output.polar_confidence_retention = 1.0f;
+  if(parameters.feature_profile == STELLAR_FEATURE_STRUCTURES_V065) {
+    const StellarFeatureProfileStyleV065 style =
+        stellarFeatureProfileStyleV065(parameters.feature_profile);
+    const float disk_radius_fraction = output.cylindrical_radius_cm /
+        parameters.disk_radius_cm;
+    output.disk_annulus_support = stellarSmoothstep(
+        style.disk_inner_start_fraction, style.disk_inner_full_fraction,
+        disk_radius_fraction);
+    output.disk_density_retention = 1.0f -
+        (1.0f - style.disk_density_floor) * stellarSmoothstep(
+            style.disk_density_taper_low, style.disk_density_taper_high,
+            output.log_density);
+    output.disk_weight *= output.disk_annulus_support *
+        output.disk_density_retention;
+    output.polar_confidence_retention = style.polar_envelope_floor +
+        (1.0f - style.polar_envelope_floor) * stellarSmoothstep(
+            style.polar_confidence_low, style.polar_confidence_high,
+            output.polar_weight);
+    output.polar_weight *= output.polar_confidence_retention;
+  }
   return output;
 }
 

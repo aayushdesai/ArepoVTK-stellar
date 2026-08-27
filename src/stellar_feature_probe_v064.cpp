@@ -70,6 +70,7 @@ int main(int argc, char **argv)
   StellarTransferParameters parameters = {};
   parameters.mode = STELLAR_TRANSFER_COMPOSITE;
   parameters.palette_profile = STELLAR_PALETTE_LEGACY_V052;
+  parameters.feature_profile = STELLAR_FEATURE_LEGACY_V064;
   std::string scene_path;
   std::string output_path;
   std::vector<float> thresholds = {0.01f, 0.05f, 0.10f, 0.25f, 0.50f};
@@ -82,6 +83,17 @@ int main(int argc, char **argv)
       scene_path = argv[++index];
     else if(option == "--output" && index + 1 < argc)
       output_path = argv[++index];
+    else if(option == "--feature-profile" && index + 1 < argc) {
+      const std::string profile = argv[++index];
+      if(profile == "legacy_v064")
+        parameters.feature_profile = STELLAR_FEATURE_LEGACY_V064;
+      else if(profile == "stellar_structures_v065")
+        parameters.feature_profile = STELLAR_FEATURE_STRUCTURES_V065;
+      else {
+        std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR invalid feature profile\n";
+        return 2;
+      }
+    }
     else if(option == "--center")
       has_center = parseVector(argc, argv, &index, parameters.center);
     else if(option == "--axis")
@@ -149,6 +161,7 @@ int main(int argc, char **argv)
      !(parameters.polar_inner_cm > 0.0f) ||
      !(parameters.polar_outer_cm > parameters.polar_inner_cm) ||
      !(parameters.polar_cone_ratio > 0.0f) ||
+     !stellarFeatureProfileValidV065(parameters.feature_profile) ||
      !(axis_norm > 0.0) || !std::isfinite(axis_norm)) {
     std::cerr << "STELLAR_FEATURE_PROBE_V064_ERROR missing or invalid required input\n";
     return 2;
@@ -167,6 +180,8 @@ int main(int argc, char **argv)
   }
   std::cout << "STELLAR_FEATURE_PROBE_V064_OK scene=" << scene_path
             << " output=" << output_path
+            << " feature_profile="
+            << stellarFeatureProfileNameV065(parameters.feature_profile)
             << " cells=" << summary.cells
             << " rays=" << summary.rays
             << " rows=" << summary.rows.size()

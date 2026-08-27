@@ -269,7 +269,8 @@ bool stellarProbeSceneV064(
 {
   if(!summary || minimum_weights.empty())
     return fail(error, "invalid output or empty weight threshold list");
-  if(!(parameters.box_size > 0.0) ||
+  if(!stellarFeatureProfileValidV065(parameters.feature_profile) ||
+     !(parameters.box_size > 0.0) ||
      !std::isfinite(parameters.box_size) ||
      !(parameters.material_radius_cm > 0.0f) ||
      !std::isfinite(parameters.material_radius_cm) ||
@@ -474,6 +475,8 @@ bool stellarWriteFeatureProbeV064(
          << "# sample_height=" << summary.sample_height << "\n"
          << "# orthographic_projection="
          << (summary.orthographic_projection ? "true" : "false") << "\n"
+         << "# feature_profile="
+         << stellarFeatureProfileNameV065(parameters.feature_profile) << "\n"
          << "# disk_radius_cm=" << parameters.disk_radius_cm << "\n"
          << "# disk_half_thickness_cm="
          << parameters.disk_half_thickness_cm << "\n"
