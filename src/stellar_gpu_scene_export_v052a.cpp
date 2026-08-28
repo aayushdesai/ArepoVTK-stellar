@@ -299,7 +299,7 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
            << endl;
       return false;
     }
-    cout << "STELLAR_SCENE_EXPORT_V073_OK file=" << filename
+    cerr << "STELLAR_SCENE_EXPORT_V073_OK file=" << filename
          << " cells=" << header.num_cells
          << " edges=" << header.num_edges
          << " invalid_edges=" << header.invalid_neighbor_edges
