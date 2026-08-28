@@ -8,9 +8,11 @@ feature-aware point cloud, and writes a self-contained WebGL page. The page can
 be opened directly, so it does not require Mayavi, Matplotlib, a Python GUI, or
 a development server.
 
-The point cloud exposes density, temperature, speed, radial velocity,
-rotational fraction, and signed outward axial velocity. These views are
-diagnostic; the production renderer remains native C++ Voronoi.
+The point cloud exposes density, temperature, speed, radial and azimuthal
+velocity, rotational fraction, angular-momentum alignment, signed outward
+axial velocity, an outward mass-flux proxy, cylindrical radius, and axial
+position. These views are diagnostic; the production renderer remains native
+C++ Voronoi.
 
 ## Build and inspect
 
@@ -36,13 +38,17 @@ look-at, view direction, up, and screen half extent in cm.
 
 ## Compile a spline
 
-At least two key poses must span the desired template path. The spline compiler
+The snapshot field tags the current camera as a control point at that simulation
+frame. It does not load another snapshot and one pose cannot animate. Record one
+reviewed pose in each of several scene viewers, then pass all downloaded JSON
+files together. At least two key poses must span the desired template path. The spline compiler
 retains simulation time, center, physical axis, and material/disk/outflow
 extents from an existing 21-column v055 template:
 
 ```text
 python3 tools/stellar_camera_spline.py \
-  --keyframes stellar_camera_keyframes.json \
+  --keyframes pose_0031.json pose_0421.json pose_0721.json \
+              pose_0901.json pose_1016.json \
   --template accepted_camera_path.tsv \
   --output candidate_spline_camera_path.tsv \
   --diagnostics candidate_spline_diagnostics.tsv

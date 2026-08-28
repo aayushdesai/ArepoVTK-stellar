@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -252,12 +253,26 @@ def read_keyframes(path: Path) -> tuple[dict, list[dict]]:
     if payload.get("schema") != SCHEMA:
         raise ValueError(f"expected keyframe schema {SCHEMA}")
     keyframes = payload.get("keyframes")
-    if not isinstance(keyframes, list) or len(keyframes) < 2:
-        raise ValueError("at least two camera keyframes are required")
+    if not isinstance(keyframes, list) or not keyframes:
+        raise ValueError(f"{path}: at least one camera keyframe is required")
     snapshots = [int(keyframe["snapshot"]) for keyframe in keyframes]
     if any(right <= left for left, right in zip(snapshots, snapshots[1:])):
-        raise ValueError("keyframe snapshots must increase")
+        raise ValueError(f"{path}: keyframe snapshots must increase")
     return payload, keyframes
+
+
+def read_keyframe_files(paths: list[Path]) -> list[dict]:
+    combined: list[dict] = []
+    for path in paths:
+        _, keyframes = read_keyframes(path)
+        combined.extend(keyframes)
+    combined.sort(key=lambda keyframe: int(keyframe["snapshot"]))
+    if len(combined) < 2:
+        raise ValueError("at least two camera keyframes are required in total")
+    snapshots = [int(keyframe["snapshot"]) for keyframe in combined]
+    if any(right <= left for left, right in zip(snapshots, snapshots[1:])):
+        raise ValueError("combined keyframe snapshots must be unique")
+    return combined
 
 
 def compile_spline(template_rows: list[list[float]], keyframes: list[dict],
@@ -371,7 +386,6 @@ def write_diagnostics(path: Path, rows: list[dict]) -> None:
 
 
 def sha256(path: Path) -> str:
-    import hashlib
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
@@ -379,9 +393,18 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def keyframe_bundle_sha256(paths: list[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(sha256(path).encode("ascii"))
+        digest.update(b"\n")
+    return digest.hexdigest()
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--keyframes", type=Path, required=True)
+    parser.add_argument("--keyframes", type=Path, required=True, nargs="+",
+                        help="One or more downloaded camera-keyframe JSON files")
     parser.add_argument("--template", type=Path, required=True,
                         help="Existing 21-column v055 path providing timeline and physical fields")
     parser.add_argument("--output", type=Path, required=True)
@@ -392,11 +415,11 @@ def main(argv: list[str] | None = None) -> int:
     if not 0.0 <= args.tension <= 1.0:
         parser.error("--tension must lie in [0,1]")
     try:
-        _, keyframes = read_keyframes(args.keyframes)
+        keyframes = read_keyframe_files(args.keyframes)
         template = read_template(args.template)
         rows, diagnostics = compile_spline(template, keyframes, args.tension)
         provenance = {
-            "keyframes_sha256": sha256(args.keyframes),
+            "keyframes_sha256": keyframe_bundle_sha256(args.keyframes),
             "template_sha256": sha256(args.template),
         }
         write_path(args.output, rows, provenance)

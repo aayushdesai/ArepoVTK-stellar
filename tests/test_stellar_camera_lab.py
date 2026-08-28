@@ -64,12 +64,36 @@ class StellarCameraLabTest(unittest.TestCase):
             self.assertEqual(payload["point_count"], 1000)
             self.assertIn("rotational_fraction", payload["channels"])
             self.assertIn("outward_axial_velocity", payload["channels"])
+            self.assertIn("azimuthal_velocity", payload["channels"])
+            self.assertIn("angular_momentum_alignment", payload["channels"])
+            self.assertIn("outward_mass_flux_proxy", payload["channels"])
             lab.write_html(output, payload)
             text = output.read_text(encoding="utf-8")
             self.assertIn("stellar_scene_camera_lab_v001", text)
             self.assertIn("Stellar Camera Lab", text)
             with self.assertRaises(FileExistsError):
                 lab.write_html(output, payload)
+
+    def test_merge_keyframe_files(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            payloads = [
+                {"schema": spline.SCHEMA, "keyframes": [{
+                    "snapshot": 10, "look_at_cm": [0, 0, 0],
+                    "view_direction": [0, 0, -1], "up": [0, 1, 0],
+                    "screen_half_extent_cm": 1.0}]},
+                {"schema": spline.SCHEMA, "keyframes": [{
+                    "snapshot": 20, "look_at_cm": [1, 0, 0],
+                    "view_direction": [0.2, 0, -1], "up": [0, 1, 0],
+                    "screen_half_extent_cm": 2.0}]},
+            ]
+            paths = []
+            for index, payload in enumerate(payloads):
+                path = root / f"pose{index}.json"
+                path.write_text(json.dumps(payload), encoding="utf-8")
+                paths.append(path)
+            merged = spline.read_keyframe_files(paths)
+            self.assertEqual([row["snapshot"] for row in merged], [10, 20])
 
     def test_spline_compiler(self) -> None:
         template = []
