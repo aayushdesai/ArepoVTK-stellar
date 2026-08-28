@@ -407,6 +407,8 @@ button:hover { background: #222b33; }
   <h2>Camera</h2>
   <div class="row"><button id="reset">Reset</button><button id="rollLeft">Roll -2 deg</button></div>
   <div class="row"><button id="fit">Fit cloud</button><button id="rollRight">Roll +2 deg</button></div>
+  <div class="row"><button id="zoomIn">Zoom in 2x</button><button id="zoomOut">Zoom out 2x</button></div>
+  <div id="zoomReadout" class="meta"></div>
   <label for="snapshot">Key pose snapshot</label><input id="snapshot" type="number" min="0" step="1">
   <div class="meta">A key pose is one spline control point: this camera orientation, look-at point, roll, and zoom at the named simulation snapshot. One pose does not create animation.</div>
   <button id="addPose">Add current key pose</button>
@@ -420,7 +422,7 @@ button:hover { background: #222b33; }
   </div>
   <div id="status" class="meta"></div>
 </aside>
-<div class="hint">Drag: orbit | Shift/right drag: pan | Wheel: zoom | K: save pose | Space: play</div>
+<div class="hint">Drag: orbit | Shift/right drag: pan | Wheel: zoom | Double-click: enter feature | K: save pose | Space: play</div>
 <script>
 const DATA = __PAYLOAD__;
 const canvas = document.getElementById('view');
@@ -485,20 +487,23 @@ let camera={target:[...initial.target],scale:initial.scale,...cleanBasis(initial
 let keyframes=[], dragging=false, last=[0,0], panMode=false, playing=null;
 function setCamera(entry) { camera.target=[...entry.target]; camera.scale=entry.scale; Object.assign(camera,cleanBasis(entry.forward,entry.up)); }
 function resize(){const ratio=devicePixelRatio||1,w=Math.floor(canvas.clientWidth*ratio),h=Math.floor(canvas.clientHeight*ratio);if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h);} }
-function render(){resize();gl.clearColor(0.015,0.022,0.03,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.uniform3fv(locations.target,camera.target);gl.uniform3fv(locations.right,camera.right);gl.uniform3fv(locations.up,camera.up);gl.uniform3fv(locations.forward,camera.forward);gl.uniform1f(locations.scale,camera.scale);gl.uniform1f(locations.aspect,canvas.width/canvas.height);gl.uniform1f(locations.depth,4.0);gl.uniform1f(locations.point,+pointSize.value*(devicePixelRatio||1));gl.uniform1f(locations.low,+clipLow.value);gl.uniform1f(locations.high,+clipHigh.value);gl.uniform1f(locations.opacity,+opacity.value);gl.drawArrays(gl.POINTS,0,DATA.point_count);requestAnimationFrame(render);}
+function render(){resize();gl.clearColor(0.015,0.022,0.03,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.uniform3fv(locations.target,camera.target);gl.uniform3fv(locations.right,camera.right);gl.uniform3fv(locations.up,camera.up);gl.uniform3fv(locations.forward,camera.forward);gl.uniform1f(locations.scale,camera.scale);gl.uniform1f(locations.aspect,canvas.width/canvas.height);gl.uniform1f(locations.depth,4.0);gl.uniform1f(locations.point,+pointSize.value*(devicePixelRatio||1));gl.uniform1f(locations.low,+clipLow.value);gl.uniform1f(locations.high,+clipHigh.value);gl.uniform1f(locations.opacity,+opacity.value);gl.drawArrays(gl.POINTS,0,DATA.point_count);zoomReadout.textContent=`screen half extent ${(camera.scale*DATA.scene.display_radius_cm).toExponential(3)} cm (${camera.scale.toExponential(3)} scene radii)`;requestAnimationFrame(render);}
 function loadChannel(name){const item=DATA.channels[name];gl.bindBuffer(gl.ARRAY_BUFFER,valueBuffer);gl.bufferData(gl.ARRAY_BUFFER,decodeFloat32(item.values),gl.STATIC_DRAW);gl.vertexAttribPointer(valueLocation,1,gl.FLOAT,false,0,0);gl.uniform1f(locations.diverging,item.diverging?1:0);channelMeta.textContent=`${item.label}; display range ${item.low.toPrecision(4)} to ${item.high.toPrecision(4)}`;}
 const channel=document.getElementById('channel'),channelMeta=document.getElementById('channelMeta'),pointSize=document.getElementById('pointSize'),opacity=document.getElementById('opacity'),clipLow=document.getElementById('clipLow'),clipHigh=document.getElementById('clipHigh');
 const sceneMeta=document.getElementById('sceneMeta'),statusText=document.getElementById('status'),snapshotInput=document.getElementById('snapshot'),poseCountText=document.getElementById('poseCount');
 const resetButton=document.getElementById('reset'),fitButton=document.getElementById('fit'),rollLeftButton=document.getElementById('rollLeft'),rollRightButton=document.getElementById('rollRight');
+const zoomInButton=document.getElementById('zoomIn'),zoomOutButton=document.getElementById('zoomOut'),zoomReadout=document.getElementById('zoomReadout');
 const addPoseButton=document.getElementById('addPose'),copyPoseButton=document.getElementById('copyPose'),downloadButton=document.getElementById('download');
 const timelinePanel=document.getElementById('timeline'),pathSlider=document.getElementById('pathSlider'),pathStatus=document.getElementById('pathStatus'),playButton=document.getElementById('play'),stopButton=document.getElementById('stop');
 for(const name of Object.keys(DATA.channels)){const option=document.createElement('option');option.value=name;option.textContent=name.replaceAll('_',' ');channel.appendChild(option);} channel.value='rotational_fraction';loadChannel(channel.value);channel.onchange=()=>loadChannel(channel.value);
 document.getElementById('sceneMeta').textContent=`snapshot ${DATA.scene.snapshot ?? 'unknown'} | ${DATA.point_count.toLocaleString()} / ${DATA.scene.num_cells.toLocaleString()} cells | radius ${DATA.scene.display_radius_cm.toExponential(3)} cm | scene ${DATA.scene.sha256.slice(0,12)}`;
 if(DATA.scene.snapshot !== null) snapshotInput.value=DATA.scene.snapshot;
 canvas.oncontextmenu=e=>e.preventDefault();canvas.onpointerdown=e=>{dragging=true;canvas.classList.add('dragging');last=[e.clientX,e.clientY];panMode=e.shiftKey||e.button===2;canvas.setPointerCapture(e.pointerId);};canvas.onpointerup=e=>{dragging=false;canvas.classList.remove('dragging');canvas.releasePointerCapture(e.pointerId);};canvas.onpointermove=e=>{if(!dragging)return;const dx=e.clientX-last[0],dy=e.clientY-last[1];last=[e.clientX,e.clientY];if(panMode){camera.target=V.add(camera.target,V.add(V.scale(camera.right,-dx*camera.scale*0.0025),V.scale(camera.up,dy*camera.scale*0.0025)));}else{let f=rotate(camera.forward,camera.up,-dx*0.006),r=V.unit(V.cross(f,camera.up));f=rotate(f,r,-dy*0.006);let u=rotate(camera.up,r,-dy*0.006);Object.assign(camera,cleanBasis(f,u));}};
-canvas.onwheel=e=>{e.preventDefault();camera.scale=Math.min(20,Math.max(0.003,camera.scale*Math.exp(e.deltaY*0.001)));};
+canvas.onwheel=e=>{e.preventDefault();camera.scale=Math.min(100,Math.max(1e-6,camera.scale*Math.exp(e.deltaY*0.0015)));};
+canvas.ondblclick=e=>{const rect=canvas.getBoundingClientRect(),aspect=canvas.width/canvas.height,x=((e.clientX-rect.left)/rect.width*2-1)*camera.scale*aspect,y=(1-(e.clientY-rect.top)/rect.height*2)*camera.scale;camera.target=V.add(camera.target,V.add(V.scale(camera.right,x),V.scale(camera.up,y)));camera.scale=Math.max(1e-6,camera.scale*0.35);};
 function roll(angle){camera.up=rotate(camera.up,camera.forward,angle);Object.assign(camera,cleanBasis(camera.forward,camera.up));}
 resetButton.onclick=()=>setCamera(initial);fitButton.onclick=()=>{camera.target=[0,0,0];camera.scale=1.05;};rollLeftButton.onclick=()=>roll(-Math.PI/90);rollRightButton.onclick=()=>roll(Math.PI/90);
+zoomInButton.onclick=()=>{camera.scale=Math.max(1e-6,camera.scale*0.5);};zoomOutButton.onclick=()=>{camera.scale=Math.min(100,camera.scale*2);};
 function pose(){const radius=DATA.scene.display_radius_cm,center=DATA.scene.center_cm,look=V.add(center,V.scale(camera.target,radius)),half=camera.scale*radius,pos=V.sub(look,V.scale(camera.forward,4*half));return {snapshot:+snapshotInput.value,position_cm:pos,look_at_cm:look,view_direction:[...camera.forward],up:[...camera.up],screen_half_extent_cm:half};}
 function updateCount(){poseCountText.textContent=`${keyframes.length} key pose${keyframes.length===1?'':'s'}`;}
 addPoseButton.onclick=()=>{if(!snapshotInput.value){statusText.textContent='Enter a snapshot number first.';return;}const p=pose();const old=keyframes.findIndex(k=>k.snapshot===p.snapshot);if(old>=0)keyframes[old]=p;else keyframes.push(p);keyframes.sort((a,b)=>a.snapshot-b.snapshot);updateCount();statusText.textContent=`Stored pose at snapshot ${p.snapshot}.`;};

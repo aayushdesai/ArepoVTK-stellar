@@ -32,7 +32,9 @@ deterministic density-center and angular-momentum-axis estimates. Production
 authoring should use reviewed, hash-bound physical center and axis values.
 
 Drag to orbit, Shift-drag or right-drag to pan, and use the wheel to change the
-orthographic half extent. Enter a snapshot and add the current key pose. The
+orthographic half extent. Double-click a visible feature to recenter on it and
+zoom inward; the explicit zoom buttons support the same deep inspection without
+a mouse wheel. Enter a snapshot and add the current key pose. The
 downloaded JSON uses `stellar_camera_keyframes_v001` and records position,
 look-at, view direction, up, and screen half extent in cm.
 
