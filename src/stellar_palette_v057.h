@@ -6,7 +6,8 @@ enum StellarPaletteProfile {
   STELLAR_PALETTE_COPPER_BLUE_V057 = 1,
   STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058 = 2,
   STELLAR_PALETTE_STRUCTURE_FLUX_BALANCED_V068 = 3,
-  STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068 = 4
+  STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068 = 4,
+  STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070 = 5
 };
 
 struct StellarPaletteStyle {
@@ -63,7 +64,8 @@ STELLAR_HD inline bool stellarPaletteProfileValid(int profile)
       profile == STELLAR_PALETTE_COPPER_BLUE_V057 ||
       profile == STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058 ||
       profile == STELLAR_PALETTE_STRUCTURE_FLUX_BALANCED_V068 ||
-      profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068;
+      profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068 ||
+      profile == STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070;
 }
 
 STELLAR_HD inline StellarPaletteStyle stellarPaletteStyle(int profile)
@@ -76,16 +78,28 @@ STELLAR_HD inline StellarPaletteStyle stellarPaletteStyle(int profile)
   style.polar_extinction_scale = 1.0f;
 
   if(profile == STELLAR_PALETTE_STRUCTURE_FLUX_BALANCED_V068 ||
-     profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068) {
+     profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068 ||
+     profile == STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070) {
+    const bool layered =
+        profile == STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070;
     const bool vivid =
-        profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068;
-    const float disk_low[3] = {0.16f, 0.028f, 0.004f};
-    const float disk_high[3] = {1.00f, 0.62f, 0.14f};
+        profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068 || layered;
+    const float disk_low[3] = {
+        layered ? 0.20f : 0.16f,
+        layered ? 0.040f : 0.028f,
+        layered ? 0.006f : 0.004f};
+    const float disk_high[3] = {
+        layered ? 0.88f : 1.00f,
+        layered ? 0.46f : 0.62f,
+        layered ? 0.08f : 0.14f};
     const float polar_low[3] = {0.065f, 0.025f, 0.006f};
     const float polar_high[3] = {0.55f, 0.20f, 0.04f};
     const float accent_low[3] = {0.010f, 0.025f, 0.18f};
     const float accent_high[3] = {0.08f, 0.22f, 0.95f};
-    const float stream_color[3] = {0.88f, 0.20f, 0.025f};
+    const float stream_color[3] = {
+        layered ? 0.95f : 0.88f,
+        layered ? 0.12f : 0.20f,
+        layered ? 0.015f : 0.025f};
     const float flux_color[3] = {0.025f, 0.10f, 0.85f};
     for(int channel = 0; channel < 3; channel++) {
       style.disk_low_density[channel] = disk_low[channel];
@@ -97,7 +111,7 @@ STELLAR_HD inline StellarPaletteStyle stellarPaletteStyle(int profile)
       style.disk_stream_color[channel] = stream_color[channel];
       style.polar_flux_color[channel] = flux_color[channel];
     }
-    style.disk_temperature_mix = vivid ? 0.38f : 0.32f;
+    style.disk_temperature_mix = layered ? 0.22f : (vivid ? 0.38f : 0.32f);
     style.polar_temperature_mix = vivid ? 0.06f : 0.10f;
     style.polar_accent_temperature_low = 6.10f;
     style.polar_accent_temperature_high = 7.20f;
@@ -111,23 +125,26 @@ STELLAR_HD inline StellarPaletteStyle stellarPaletteStyle(int profile)
     style.polar_accent_enabled = 1;
     style.neutralize_red_blue_overlap = 1;
     style.kinematic_optical_enabled = 1;
-    style.disk_stream_color_mix = vivid ? 0.60f : 0.48f;
+    style.disk_stream_color_mix = layered ? 0.72f : (vivid ? 0.60f : 0.48f);
     style.polar_flux_color_mix = vivid ? 0.78f : 0.58f;
     style.merger_emissivity_floor = 0.80f;
     style.merger_radial_emissivity_gain = vivid ? 0.45f : 0.35f;
-    style.disk_emissivity_floor = 0.50f;
-    style.disk_density_emissivity_gain = vivid ? 0.70f : 0.55f;
-    style.disk_radial_emissivity_gain = vivid ? 0.45f : 0.30f;
-    style.disk_extinction_floor = vivid ? 0.16f : 0.20f;
-    style.disk_density_extinction_gain = 0.42f;
-    style.disk_rotation_extinction_gain = 0.22f;
+    style.disk_emissivity_floor = layered ? 0.35f : 0.50f;
+    style.disk_density_emissivity_gain =
+        layered ? 0.20f : (vivid ? 0.70f : 0.55f);
+    style.disk_radial_emissivity_gain =
+        layered ? 0.75f : (vivid ? 0.45f : 0.30f);
+    style.disk_extinction_floor =
+        layered ? 0.025f : (vivid ? 0.16f : 0.20f);
+    style.disk_density_extinction_gain = layered ? 0.11f : 0.42f;
+    style.disk_rotation_extinction_gain = layered ? 0.035f : 0.22f;
     style.polar_emissivity_floor = vivid ? 1.65f : 1.35f;
     style.polar_mass_flux_emissivity_gain = vivid ? 4.50f : 3.00f;
     style.polar_extinction_scale = vivid ? 0.45f : 0.55f;
-    style.disk_density_texture_low = -1.0f;
-    style.disk_density_texture_high = 2.5f;
-    style.disk_radial_fraction_low = 0.08f;
-    style.disk_radial_fraction_high = 0.55f;
+    style.disk_density_texture_low = layered ? -0.50f : -1.0f;
+    style.disk_density_texture_high = layered ? 3.00f : 2.5f;
+    style.disk_radial_fraction_low = layered ? 0.04f : 0.08f;
+    style.disk_radial_fraction_high = layered ? 0.45f : 0.55f;
     style.polar_flux_density_low = -3.0f;
     style.polar_flux_density_high = -0.4f;
     style.polar_flux_speed_low = 7.0e7f;
@@ -226,6 +243,8 @@ STELLAR_HD inline StellarPaletteStyle stellarPaletteStyle(int profile)
 
 inline const char *stellarPaletteProfileName(int profile)
 {
+  if(profile == STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070)
+    return "structure_flux_layered_v070";
   if(profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068)
     return "structure_flux_vivid_v068";
   if(profile == STELLAR_PALETTE_STRUCTURE_FLUX_BALANCED_V068)

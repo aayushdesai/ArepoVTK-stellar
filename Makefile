@@ -94,6 +94,9 @@ test_stellar_palette_v058: tests/test_stellar_palette_v058.cpp src/stellar_rende
 test_stellar_optical_profile_v068: tests/test_stellar_optical_profile_v068.cpp src/stellar_render_model_v052a.h src/stellar_feature_profile_v065.h src/stellar_palette_v057.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_optical_profile_v068.cpp -o $@
 
+test_stellar_optical_profile_v070: tests/test_stellar_optical_profile_v070.cpp src/stellar_render_model_v052a.h src/stellar_feature_profile_v065.h src/stellar_palette_v057.h
+	$(CC) $(CFLAGS) -Isrc tests/test_stellar_optical_profile_v070.cpp -o $@
+
 test_stellar_gpu_ray_status_v053b: tests/test_stellar_gpu_ray_status_v053b.cpp src/stellar_gpu_ray_status_v053b.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_gpu_ray_status_v053b.cpp -o $@
 
@@ -128,7 +131,7 @@ $(OBJS): | libarepo.a
 
 clean:
 	+$(MAKE) -C arepo clean
-	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 stellar_camera_director_v059 stellar_camera_director_v060 stellar_camera_director_v061 stellar_camera_director_v062 stellar_camera_director_v063 stellar_camera_director_v069 stellar_feature_probe_v064 test_stellar_cinematic_director_v059 test_stellar_cinematic_director_v060 test_stellar_cinematic_director_v061 test_stellar_cinematic_director_v062 test_stellar_cinematic_director_v063 test_stellar_cinematic_director_v069 test_stellar_palette_v057 test_stellar_palette_v058 test_stellar_optical_profile_v068 test_stellar_gpu_ray_status_v053b test_stellar_gpu_output_parity_v053b test_stellar_gpu_geometry_v053b test_stellar_gpu_profile_contract_v053c test_stellar_feature_diagnostics_v064 test_stellar_feature_profile_v065 test_stellar_feature_landmarks_v066 test_stellar_feature_framing_v067 $(MISC_RM)
+	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 stellar_camera_director_v059 stellar_camera_director_v060 stellar_camera_director_v061 stellar_camera_director_v062 stellar_camera_director_v063 stellar_camera_director_v069 stellar_feature_probe_v064 test_stellar_cinematic_director_v059 test_stellar_cinematic_director_v060 test_stellar_cinematic_director_v061 test_stellar_cinematic_director_v062 test_stellar_cinematic_director_v063 test_stellar_cinematic_director_v069 test_stellar_palette_v057 test_stellar_palette_v058 test_stellar_optical_profile_v068 test_stellar_optical_profile_v070 test_stellar_gpu_ray_status_v053b test_stellar_gpu_output_parity_v053b test_stellar_gpu_geometry_v053b test_stellar_gpu_profile_contract_v053c test_stellar_feature_diagnostics_v064 test_stellar_feature_profile_v065 test_stellar_feature_landmarks_v066 test_stellar_feature_framing_v067 $(MISC_RM)
 
 build/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(OPT) -c $< -o $@

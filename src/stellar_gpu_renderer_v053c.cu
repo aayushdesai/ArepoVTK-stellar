@@ -723,6 +723,8 @@ int parsePaletteProfile(const std::string &name)
     return STELLAR_PALETTE_STRUCTURE_FLUX_BALANCED_V068;
   if(name == "structure_flux_vivid_v068")
     return STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068;
+  if(name == "structure_flux_layered_v070")
+    return STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070;
   throw std::runtime_error("Unknown stellar palette profile: " + name);
 }
 

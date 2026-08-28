@@ -385,6 +385,9 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   if(Config.stellarPaletteProfile == "structure_flux_vivid_v068")
     stellarParameters.palette_profile =
         STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068;
+  if(Config.stellarPaletteProfile == "structure_flux_layered_v070")
+    stellarParameters.palette_profile =
+        STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070;
   stellarParameters.feature_profile = STELLAR_FEATURE_LEGACY_V064;
   if(Config.stellarFeatureProfile == "stellar_structures_v065")
     stellarParameters.feature_profile = STELLAR_FEATURE_STRUCTURES_V065;
@@ -430,7 +433,10 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
     const StellarPaletteStyle palette =
         stellarPaletteStyle(stellarParameters.palette_profile);
     if(palette.kinematic_optical_enabled) {
-      cerr << "STELLAR_OPTICAL_PROFILE_V068 profile="
+      cerr << (stellarParameters.palette_profile ==
+                   STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070 ?
+                   "STELLAR_OPTICAL_PROFILE_V070 profile=" :
+                   "STELLAR_OPTICAL_PROFILE_V068 profile=")
            << stellarPaletteProfileName(stellarParameters.palette_profile)
            << " id=" << stellarParameters.palette_profile
            << " feature_profile="

@@ -7,7 +7,8 @@ It intentionally excludes the later SPH neighbor-semantics experiment.
 The v053c view manifest adds explicit palette and feature-profile names after
 the transfer-mode column. This closes the v053b provenance gap that otherwise
 left both profile IDs at their zero-valued defaults. Accepted profile names are
-the native names through v068. The structure-flux profiles are rejected unless
+the native names through v068 plus the opt-in
+`structure_flux_layered_v070`. The structure-flux profiles are rejected unless
 the row also selects `composite` transfer and `stellar_structures_v065`.
 
 The manifest begins with exactly this version line:

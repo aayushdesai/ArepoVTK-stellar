@@ -13,7 +13,8 @@ inline bool stellarGpuProfileContractValidV053c(
     return false;
   const bool structure_flux =
       palette_profile == STELLAR_PALETTE_STRUCTURE_FLUX_BALANCED_V068 ||
-      palette_profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068;
+      palette_profile == STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068 ||
+      palette_profile == STELLAR_PALETTE_STRUCTURE_FLUX_LAYERED_V070;
   if(structure_flux && transfer_mode != STELLAR_TRANSFER_COMPOSITE)
     return false;
   if(structure_flux && feature_profile != STELLAR_FEATURE_STRUCTURES_V065)

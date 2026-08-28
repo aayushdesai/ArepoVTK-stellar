@@ -209,14 +209,16 @@ void ConfigSet::ReadFile(string cfgfile)
         stellarPaletteProfile != "copper_blue_v057" &&
         stellarPaletteProfile != "copper_blue_accent_v058" &&
         stellarPaletteProfile != "structure_flux_balanced_v068" &&
-        stellarPaletteProfile != "structure_flux_vivid_v068")
+        stellarPaletteProfile != "structure_flux_vivid_v068" &&
+        stellarPaletteProfile != "structure_flux_layered_v070")
       terminate("Config: unknown stellarPaletteProfile.");
     if (stellarFeatureProfile != "legacy_v064" &&
         stellarFeatureProfile != "stellar_structures_v065")
       terminate("Config: unknown stellarFeatureProfile.");
     const bool structureFluxProfile =
         stellarPaletteProfile == "structure_flux_balanced_v068" ||
-        stellarPaletteProfile == "structure_flux_vivid_v068";
+        stellarPaletteProfile == "structure_flux_vivid_v068" ||
+        stellarPaletteProfile == "structure_flux_layered_v070";
     if (structureFluxProfile && stellarFeatureProfile != "stellar_structures_v065")
       terminate("Config: structure-flux optical profiles require stellar_structures_v065.");
     if (structureFluxProfile && stellarTransferMode != "composite")
