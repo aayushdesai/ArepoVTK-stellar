@@ -67,6 +67,7 @@ public:
   string stellarTransferMode;
   string stellarPaletteProfile;
   string stellarFeatureProfile;
+  string stellarPhysicalChannel, stellarPhysicalScale;
   int stellarReconstructionMode;
   float stellarIdwPower, stellarSphSupportFactor;
   float stellarCenter[3], stellarAxis[3];
@@ -76,6 +77,9 @@ public:
   float stellarMergerOpacity, stellarDiskOpacity, stellarPolarOpacity;
   float stellarMergerEmission, stellarDiskEmission, stellarPolarEmission;
   float stellarExposure, stellarBlackPoint, stellarSaturation;
+  float stellarPhysicalRangeMin, stellarPhysicalRangeMax;
+  float stellarPhysicalSymlogLinthresh;
+  float stellarPhysicalOpacity, stellarPhysicalEmission;
   
   // Animation
   vector<string> kfSet; // key frames

@@ -412,8 +412,30 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarParameters.merger_emissivity_per_cm = Config.stellarMergerEmission;
   stellarParameters.disk_emissivity_per_cm = Config.stellarDiskEmission;
   stellarParameters.polar_emissivity_per_cm = Config.stellarPolarEmission;
+  stellarPhysicalParameters.channel =
+      stellarPhysicalChannelFromNameV071(Config.stellarPhysicalChannel);
+  stellarPhysicalParameters.scale =
+      stellarPhysicalScaleFromNameV071(Config.stellarPhysicalScale);
+  stellarPhysicalParameters.range_min = Config.stellarPhysicalRangeMin;
+  stellarPhysicalParameters.range_max = Config.stellarPhysicalRangeMax;
+  stellarPhysicalParameters.symlog_linthresh =
+      Config.stellarPhysicalSymlogLinthresh;
+  stellarPhysicalParameters.extinction_per_cm = Config.stellarPhysicalOpacity;
+  stellarPhysicalParameters.emissivity_per_cm = Config.stellarPhysicalEmission;
 
   if(ThisTask == 0 && Config.stellarTransferEnabled) {
+    if(stellarPhysicalParameters.channel !=
+       STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071)
+      cerr << "STELLAR_PHYSICAL_CHANNEL_V071 channel="
+           << Config.stellarPhysicalChannel
+           << " scale=" << Config.stellarPhysicalScale
+           << " range=" << Config.stellarPhysicalRangeMin << ","
+           << Config.stellarPhysicalRangeMax
+           << " symlog_linthresh=" << Config.stellarPhysicalSymlogLinthresh
+           << " opacity=" << Config.stellarPhysicalOpacity
+           << " emission=" << Config.stellarPhysicalEmission
+           << " palette=copper_blue"
+           << " traversal=native_voronoi" << endl;
     const StellarFeatureProfileStyleV065 featureStyle =
         stellarFeatureProfileStyleV065(stellarParameters.feature_profile);
     cerr << "STELLAR_FEATURE_PROFILE_V065 profile="
@@ -1193,9 +1215,21 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
 
         if(Config.stellarTransferEnabled) {
           const double samplePosition[3] = {samplept.x, samplept.y, samplept.z};
-          const StellarOpticalSample optical = evaluateStellarOpticalSample(
-              stellarParameters, samplePosition, vals[TF_VAL_DENS], vals[TF_VAL_TEMP],
-              stellarVelocity);
+          StellarOpticalSample optical;
+          if(stellarPhysicalParameters.channel ==
+             STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071) {
+            optical = evaluateStellarOpticalSample(
+                stellarParameters, samplePosition, vals[TF_VAL_DENS],
+                vals[TF_VAL_TEMP], stellarVelocity);
+          } else {
+            const StellarPhysicalSampleV071 physical =
+                evaluateStellarPhysicalSampleV071(
+                    stellarParameters, samplePosition, vals[TF_VAL_DENS],
+                    vals[TF_VAL_TEMP], stellarVelocity,
+                    vals[TF_VAL_ENTROPY], vals[TF_VAL_BMAG]);
+            optical = evaluateStellarPhysicalOpticalV071(
+                physical, stellarPhysicalParameters);
+          }
           const StellarIntegratedSegment segment =
               integrateStellarOpticalSegment(optical, stepSize);
           if(status) {

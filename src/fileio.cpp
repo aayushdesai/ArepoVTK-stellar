@@ -5,6 +5,7 @@
 
 #include "fileio.h"
 #include "fileio_img.h"
+#include "stellar_physical_channel_v071.h"
 
 // ConfigSet
 void ConfigSet::ReadFile(string cfgfile)
@@ -121,6 +122,10 @@ void ConfigSet::ReadFile(string cfgfile)
       readValue<string>("stellarPaletteProfile", "legacy_v052");
   stellarFeatureProfile =
       readValue<string>("stellarFeatureProfile", "legacy_v064");
+  stellarPhysicalChannel =
+      readValue<string>("stellarPhysicalChannel", "optical");
+  stellarPhysicalScale =
+      readValue<string>("stellarPhysicalScale", "linear");
   const string stellarReconstruction =
       readValue<string>("stellarReconstruction", "sph");
   if (stellarReconstruction == "sph")
@@ -156,6 +161,16 @@ void ConfigSet::ReadFile(string cfgfile)
   stellarExposure = readValue<float>("stellarExposure", 1.4f);
   stellarBlackPoint = readValue<float>("stellarBlackPoint", 0.002f);
   stellarSaturation = readValue<float>("stellarSaturation", 0.82f);
+  stellarPhysicalRangeMin =
+      readValue<float>("stellarPhysicalRangeMin", 0.0f);
+  stellarPhysicalRangeMax =
+      readValue<float>("stellarPhysicalRangeMax", 1.0f);
+  stellarPhysicalSymlogLinthresh =
+      readValue<float>("stellarPhysicalSymlogLinthresh", 1.0f);
+  stellarPhysicalOpacity =
+      readValue<float>("stellarPhysicalOpacity", 1.0e-11f);
+  stellarPhysicalEmission =
+      readValue<float>("stellarPhysicalEmission", stellarPhysicalOpacity);
 
   // Animation
   startFrame    = readValue<int>("startFrame",     0);  
@@ -215,6 +230,20 @@ void ConfigSet::ReadFile(string cfgfile)
     if (stellarFeatureProfile != "legacy_v064" &&
         stellarFeatureProfile != "stellar_structures_v065")
       terminate("Config: unknown stellarFeatureProfile.");
+    const int physicalChannel =
+        stellarPhysicalChannelFromNameV071(stellarPhysicalChannel);
+    const int physicalScale =
+        stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
+    if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
+      terminate("Config: unknown stellarPhysicalChannel.");
+    if (physicalScale == STELLAR_PHYSICAL_SCALE_INVALID_V071)
+      terminate("Config: unknown stellarPhysicalScale.");
+    if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
+        (!(stellarPhysicalRangeMax > stellarPhysicalRangeMin) ||
+         !(stellarPhysicalSymlogLinthresh > 0.0f) ||
+         stellarPhysicalOpacity < 0.0f ||
+         !(stellarPhysicalEmission > 0.0f)))
+      terminate("Config: invalid stellar physical-channel transfer parameter.");
     const bool structureFluxProfile =
         stellarPaletteProfile == "structure_flux_balanced_v068" ||
         stellarPaletteProfile == "structure_flux_vivid_v068" ||

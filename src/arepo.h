@@ -12,6 +12,7 @@
 
 #include "transfer.h"
 #include "stellar_render_model_v052a.h"
+#include "stellar_physical_channel_v071.h"
 #include "stellar_reconstruction_v053.h"
 #include "voronoi_3db.h"
 
@@ -127,6 +128,7 @@ private:
   BBox extent;
   const TransferFunction *transferFunction;
   StellarTransferParameters stellarParameters;
+  StellarPhysicalTransferV071 stellarPhysicalParameters;
   
   // units, etc
   float unitConversions[TF_NUM_VALS]; // mult factor from code units to ArepoVTK "units"
