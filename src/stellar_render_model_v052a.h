@@ -316,6 +316,56 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
     polar_color[channel] = palette.polar_temperature_mix * blackbody[channel] +
         (1.0f - palette.polar_temperature_mix) * styled_polar_color;
   }
+  float merger_emissivity_scale = 1.0f;
+  float disk_emissivity_scale = 1.0f;
+  float disk_extinction_scale = 1.0f;
+  float polar_emissivity_scale = 1.0f;
+  float polar_extinction_scale = 1.0f;
+  if(palette.kinematic_optical_enabled) {
+    const float radial_fraction = fabsf(feature.radial_velocity_cm_per_s) /
+        (feature.speed_cm_per_s + 1.0e4f);
+    const float disk_density_texture = stellarSmoothstep(
+        palette.disk_density_texture_low,
+        palette.disk_density_texture_high, feature.log_density);
+    const float disk_radial_texture = stellarSmoothstep(
+        palette.disk_radial_fraction_low,
+        palette.disk_radial_fraction_high, radial_fraction);
+    const float disk_rotation_texture = stellarSmoothstep(
+        0.72f, 0.97f, feature.rotational_fraction);
+    const float polar_flux_density = stellarSmoothstep(
+        palette.polar_flux_density_low, palette.polar_flux_density_high,
+        feature.log_density);
+    const float polar_flux_speed = stellarSmoothstep(
+        palette.polar_flux_speed_low, palette.polar_flux_speed_high,
+        feature.outward_axial_velocity_cm_per_s);
+    const float polar_flux_coherence = stellarSmoothstep(
+        palette.polar_flux_coherence_low,
+        palette.polar_flux_coherence_high,
+        feature.outward_axial_fraction);
+    const float normalized_mass_flux = polar_flux_density *
+        polar_flux_speed * polar_flux_coherence;
+    const float disk_stream_mix = palette.disk_stream_color_mix *
+        disk_radial_texture;
+    const float polar_flux_mix = palette.polar_flux_color_mix *
+        normalized_mass_flux;
+    for(int channel = 0; channel < 3; channel++) {
+      disk_color[channel] += disk_stream_mix *
+          (palette.disk_stream_color[channel] - disk_color[channel]);
+      polar_color[channel] += polar_flux_mix *
+          (palette.polar_flux_color[channel] - polar_color[channel]);
+    }
+    merger_emissivity_scale = palette.merger_emissivity_floor +
+        palette.merger_radial_emissivity_gain * disk_radial_texture;
+    disk_emissivity_scale = palette.disk_emissivity_floor +
+        palette.disk_density_emissivity_gain * disk_density_texture +
+        palette.disk_radial_emissivity_gain * disk_radial_texture;
+    disk_extinction_scale = palette.disk_extinction_floor +
+        palette.disk_density_extinction_gain * disk_density_texture +
+        palette.disk_rotation_extinction_gain * disk_rotation_texture;
+    polar_emissivity_scale = palette.polar_emissivity_floor +
+        palette.polar_mass_flux_emissivity_gain * normalized_mass_flux;
+    polar_extinction_scale = palette.polar_extinction_scale;
+  }
   float merger_mix = 0.0f;
   float disk_mix = 0.0f;
   float polar_mix = 0.0f;
@@ -334,11 +384,25 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
   const float total = merger_mix + disk_mix + polar_mix;
   if(total <= 0.0f)
     return output;
-  for(int channel = 0; channel < 3; channel++) {
-    output.emissivity_rgb_per_cm[channel] =
-        merger_mix * parameters.merger_emissivity_per_cm * blackbody[channel] +
-        disk_mix * parameters.disk_emissivity_per_cm * disk_color[channel] +
-        polar_mix * parameters.polar_emissivity_per_cm * polar_color[channel];
+  if(palette.kinematic_optical_enabled) {
+    for(int channel = 0; channel < 3; channel++) {
+      output.emissivity_rgb_per_cm[channel] =
+          merger_mix * parameters.merger_emissivity_per_cm *
+              merger_emissivity_scale * blackbody[channel] +
+          disk_mix * parameters.disk_emissivity_per_cm *
+              disk_emissivity_scale * disk_color[channel] +
+          polar_mix * parameters.polar_emissivity_per_cm *
+              polar_emissivity_scale * polar_color[channel];
+    }
+  } else {
+    for(int channel = 0; channel < 3; channel++) {
+      output.emissivity_rgb_per_cm[channel] =
+          merger_mix * parameters.merger_emissivity_per_cm *
+              blackbody[channel] +
+          disk_mix * parameters.disk_emissivity_per_cm * disk_color[channel] +
+          polar_mix * parameters.polar_emissivity_per_cm *
+              polar_color[channel];
+    }
   }
   if(palette.neutralize_red_blue_overlap && polar_mix > 0.0f &&
      merger_mix + disk_mix > 0.0f) {
@@ -347,10 +411,19 @@ STELLAR_HD inline StellarOpticalSample evaluateStellarOpticalSample(
     output.emissivity_rgb_per_cm[1] =
         fmaxf(output.emissivity_rgb_per_cm[1], neutral_bridge);
   }
-  output.extinction_per_cm =
-      merger_mix * parameters.merger_extinction_per_cm +
-      disk_mix * parameters.disk_extinction_per_cm +
-      polar_mix * parameters.polar_extinction_per_cm;
+  if(palette.kinematic_optical_enabled) {
+    output.extinction_per_cm =
+        merger_mix * parameters.merger_extinction_per_cm +
+        disk_mix * parameters.disk_extinction_per_cm *
+            disk_extinction_scale +
+        polar_mix * parameters.polar_extinction_per_cm *
+            polar_extinction_scale;
+  } else {
+    output.extinction_per_cm =
+        merger_mix * parameters.merger_extinction_per_cm +
+        disk_mix * parameters.disk_extinction_per_cm +
+        polar_mix * parameters.polar_extinction_per_cm;
+  }
   return output;
 }
 

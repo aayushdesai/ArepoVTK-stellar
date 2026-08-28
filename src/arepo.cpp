@@ -379,6 +379,12 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
     stellarParameters.palette_profile = STELLAR_PALETTE_COPPER_BLUE_V057;
   if(Config.stellarPaletteProfile == "copper_blue_accent_v058")
     stellarParameters.palette_profile = STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058;
+  if(Config.stellarPaletteProfile == "structure_flux_balanced_v068")
+    stellarParameters.palette_profile =
+        STELLAR_PALETTE_STRUCTURE_FLUX_BALANCED_V068;
+  if(Config.stellarPaletteProfile == "structure_flux_vivid_v068")
+    stellarParameters.palette_profile =
+        STELLAR_PALETTE_STRUCTURE_FLUX_VIVID_V068;
   stellarParameters.feature_profile = STELLAR_FEATURE_LEGACY_V064;
   if(Config.stellarFeatureProfile == "stellar_structures_v065")
     stellarParameters.feature_profile = STELLAR_FEATURE_STRUCTURES_V065;
@@ -423,11 +429,66 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
          << endl;
     const StellarPaletteStyle palette =
         stellarPaletteStyle(stellarParameters.palette_profile);
-    cerr << (stellarParameters.palette_profile ==
-                 STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058 ?
-                 "STELLAR_PALETTE_V058 profile=" :
-                 "STELLAR_PALETTE_V057 profile=")
-         << stellarPaletteProfileName(stellarParameters.palette_profile)
+    if(palette.kinematic_optical_enabled) {
+      cerr << "STELLAR_OPTICAL_PROFILE_V068 profile="
+           << stellarPaletteProfileName(stellarParameters.palette_profile)
+           << " id=" << stellarParameters.palette_profile
+           << " feature_profile="
+           << stellarFeatureProfileNameV065(stellarParameters.feature_profile)
+           << " disk_low=" << palette.disk_low_density[0] << ","
+           << palette.disk_low_density[1] << ","
+           << palette.disk_low_density[2]
+           << " disk_high=" << palette.disk_high_density[0] << ","
+           << palette.disk_high_density[1] << ","
+           << palette.disk_high_density[2]
+           << " disk_stream=" << palette.disk_stream_color[0] << ","
+           << palette.disk_stream_color[1] << ","
+           << palette.disk_stream_color[2] << ","
+           << palette.disk_stream_color_mix
+           << " polar_low=" << palette.polar_low_density[0] << ","
+           << palette.polar_low_density[1] << ","
+           << palette.polar_low_density[2]
+           << " polar_high=" << palette.polar_high_density[0] << ","
+           << palette.polar_high_density[1] << ","
+           << palette.polar_high_density[2]
+           << " polar_flux=" << palette.polar_flux_color[0] << ","
+           << palette.polar_flux_color[1] << ","
+           << palette.polar_flux_color[2] << ","
+           << palette.polar_flux_color_mix
+           << " emissivity_scales="
+           << palette.merger_emissivity_floor << ","
+           << palette.merger_radial_emissivity_gain << ","
+           << palette.disk_emissivity_floor << ","
+           << palette.disk_density_emissivity_gain << ","
+           << palette.disk_radial_emissivity_gain << ","
+           << palette.polar_emissivity_floor << ","
+           << palette.polar_mass_flux_emissivity_gain
+           << " extinction_scales="
+           << palette.disk_extinction_floor << ","
+           << palette.disk_density_extinction_gain << ","
+           << palette.disk_rotation_extinction_gain << ","
+           << palette.polar_extinction_scale
+           << " disk_texture=" << palette.disk_density_texture_low << ","
+           << palette.disk_density_texture_high << ","
+           << palette.disk_radial_fraction_low << ","
+           << palette.disk_radial_fraction_high
+           << " polar_flux_window=" << palette.polar_flux_density_low << ","
+           << palette.polar_flux_density_high << ","
+           << palette.polar_flux_speed_low << ","
+           << palette.polar_flux_speed_high << ","
+           << palette.polar_flux_coherence_low << ","
+           << palette.polar_flux_coherence_high
+           << " composite_weights=" << palette.composite_merger_weight << ","
+           << palette.composite_disk_weight << ","
+           << palette.composite_polar_weight
+           << " normalized_mass_flux=density_x_outward_speed_x_coherence"
+           << endl;
+    } else {
+      cerr << (stellarParameters.palette_profile ==
+                   STELLAR_PALETTE_COPPER_BLUE_ACCENT_V058 ?
+                   "STELLAR_PALETTE_V058 profile=" :
+                   "STELLAR_PALETTE_V057 profile=")
+           << stellarPaletteProfileName(stellarParameters.palette_profile)
          << " id=" << stellarParameters.palette_profile
          << " disk_low=" << palette.disk_low_density[0] << ","
          << palette.disk_low_density[1] << "," << palette.disk_low_density[2]
@@ -458,6 +519,7 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
          << " polar_accent=" << palette.polar_accent_enabled
          << " neutral_overlap=" << palette.neutralize_red_blue_overlap
          << endl;
+    }
   }
   
   IF_DEBUG(extent.print(" ArepoMesh extent "));
