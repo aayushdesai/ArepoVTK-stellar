@@ -5,7 +5,9 @@
 #include "camera.h"
 #include "sampler.h"
 #include "stellar_gpu_scene_format_v052.h"
+#include "stellar_gpu_scene_format_v073.h"
 
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <limits>
@@ -97,6 +99,19 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
     cerr << "STELLAR_SCENE_EXPORT_ERROR aligned snapshot temperature is unavailable." << endl;
     return false;
   }
+  const char *formatText = getenv("AREPORT_STELLAR_SCENE_FORMAT");
+  const bool physicalV073 = formatText && string(formatText) == "v073";
+  if(formatText && formatText[0] != '\0' && !physicalV073 &&
+     string(formatText) != "v052") {
+    cerr << "STELLAR_SCENE_EXPORT_ERROR unknown scene format "
+         << formatText << endl;
+    return false;
+  }
+  if(physicalV073 && RenderPhysicalAuxiliary.size() != size_t(NumGas)) {
+    cerr << "STELLAR_SCENE_EXPORT_ERROR aligned v073 physical fields are unavailable."
+         << endl;
+    return false;
+  }
 
   vector<uint64_t> offsets;
   vector<int> cellEdges;
@@ -180,6 +195,121 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
       record.start_cell = ray.index;
       record.active = 1;
     }
+  }
+
+  if(physicalV073) {
+    ArepoStellarSceneHeaderV073 header;
+    memset(&header, 0, sizeof(header));
+    memcpy(header.magic, AREPO_STELLAR_SCENE_MAGIC_V073,
+           strlen(AREPO_STELLAR_SCENE_MAGIC_V073));
+    header.version = AREPO_STELLAR_SCENE_VERSION_V073;
+    header.endian_marker = AREPO_STELLAR_SCENE_ENDIAN_MARKER_V073;
+    header.header_bytes = sizeof(header);
+    header.cell_bytes = sizeof(ArepoStellarCellV073);
+    header.edge_bytes = sizeof(ArepoStellarEdgeV073);
+    header.ray_bytes = sizeof(ArepoStellarRayV073);
+    header.sample_width = sampleWidth;
+    header.sample_height = sampleHeight;
+    header.source_width = camera->film->xResolution;
+    header.source_height = camera->film->yResolution;
+    header.samples_per_cell = int(-Config.viStepSize);
+    header.flags = AREPO_STELLAR_REQUIRED_FIELD_FLAGS_V073 |
+        AREPO_STELLAR_ZERO_LEGACY_ABSORPTION_V073;
+#ifdef NO_GHOST_CONTRIBS
+    header.flags |= AREPO_STELLAR_NO_GHOST_CONTRIBS_V073;
+#endif
+#ifdef NATURAL_NEIGHBOR_INNER
+    header.flags |= AREPO_STELLAR_NATURAL_NEIGHBOR_INNER_V073;
+#endif
+    if(raysOnly)
+      header.flags |= AREPO_STELLAR_RAYS_ONLY_V073;
+    header.num_cells = NumGas;
+    header.num_edges = numEdges;
+    header.num_rays = numRays;
+    header.invalid_neighbor_edges = invalidEdges;
+    header.inactive_rays = inactiveRays;
+    header.box_size = All.BoxSize;
+    header.ray_max_t = Config.rayMaxT;
+    for(int axis = 0; axis < 3; axis++)
+      header.camera_origin[axis] = headerCameraOrigin[axis];
+    header.position_unit_cm = 1.0;
+    header.density_unit_cgs = 1.0;
+    header.velocity_unit_cm_per_s = 1.0;
+    header.temperature_unit_kelvin = 1.0;
+    header.snapshot_time_seconds = All.Time;
+    header.magnetic_field_unit_gauss = 1.0;
+    header.pressure_unit_dyn_cm2 = 1.0;
+    header.sound_speed_unit_cm_per_s = 1.0;
+
+    ofstream output(filename.c_str(), ios::binary | ios::out);
+    if(!output.good()) {
+      cerr << "STELLAR_SCENE_EXPORT_ERROR cannot create " << filename << endl;
+      return false;
+    }
+    output.write(reinterpret_cast<const char *>(&header), sizeof(header));
+    if(!raysOnly) {
+      for(int cell = 0; cell < NumGas; cell++) {
+        ArepoStellarCellV073 record;
+        memset(&record, 0, sizeof(record));
+        for(int axis = 0; axis < 3; axis++) {
+          record.position[axis] = P[cell].Pos[axis];
+          record.velocity_cm_per_s[axis] = P[cell].Vel[axis];
+          record.magnetic_field_gauss[axis] =
+              RenderPhysicalAuxiliary[cell].magnetic_field_gauss[axis];
+        }
+        record.density_log10_plus_10 = SphP[cell].Density;
+        record.temperature_kelvin = RenderTemperature[cell];
+        record.particle_id = uint64_t(P[cell].ID);
+        record.pressure_dyn_cm2 =
+            RenderPhysicalAuxiliary[cell].pressure_dyn_cm2;
+        record.sound_speed_cm_per_s =
+            RenderPhysicalAuxiliary[cell].sound_speed_cm_per_s;
+        output.write(reinterpret_cast<const char *>(&record), sizeof(record));
+      }
+      if(!writeSceneArray(output, &offsets[0], offsets.size()))
+        return false;
+      for(int cell = 0; cell < NumGas; cell++) {
+        collectCellEdges(cell, &cellEdges);
+        for(size_t edgeIndex = 0; edgeIndex < cellEdges.size(); edgeIndex++) {
+          const connection &neighbor = DC[cellEdges[edgeIndex]];
+          ArepoStellarEdgeV073 record;
+          memset(&record, 0, sizeof(record));
+          record.packed_neighbor = packNeighbor(neighbor);
+          if(neighbor.dp_index >= 0 && neighbor.dp_index < Ndp) {
+            record.neighbor_delta[0] = compactNeighborDelta(
+                DP[neighbor.dp_index].x, P[cell].Pos[0]);
+            record.neighbor_delta[1] = compactNeighborDelta(
+                DP[neighbor.dp_index].y, P[cell].Pos[1]);
+            record.neighbor_delta[2] = compactNeighborDelta(
+                DP[neighbor.dp_index].z, P[cell].Pos[2]);
+          } else {
+            record.neighbor_delta[0] = numeric_limits<float>::quiet_NaN();
+            record.neighbor_delta[1] = numeric_limits<float>::quiet_NaN();
+            record.neighbor_delta[2] = numeric_limits<float>::quiet_NaN();
+          }
+          output.write(reinterpret_cast<const char *>(&record), sizeof(record));
+        }
+      }
+    }
+    if(!writeSceneArray(output, &rays[0], rays.size()))
+      return false;
+    output.close();
+    if(!output.good()) {
+      cerr << "STELLAR_SCENE_EXPORT_ERROR failed while closing " << filename
+           << endl;
+      return false;
+    }
+    cout << "STELLAR_SCENE_EXPORT_V073_OK file=" << filename
+         << " cells=" << header.num_cells
+         << " edges=" << header.num_edges
+         << " invalid_edges=" << header.invalid_neighbor_edges
+         << " rays=" << header.num_rays
+         << " inactive_rays=" << header.inactive_rays
+         << " rays_only=" << (raysOnly ? 1 : 0)
+         << " samples_per_cell=" << header.samples_per_cell
+         << " fields=magnetic_field_gauss,pressure_dyn_cm2,sound_speed_cm_per_s"
+         << endl;
+    return true;
   }
 
   ArepoStellarSceneHeader header;

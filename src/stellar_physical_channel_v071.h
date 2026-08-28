@@ -6,6 +6,12 @@
 
 #include "stellar_render_model_v052a.h"
 
+#ifdef __CUDACC__
+#define STELLAR_PHYSICAL_HD __host__ __device__
+#else
+#define STELLAR_PHYSICAL_HD
+#endif
+
 enum StellarPhysicalChannelV071 {
   STELLAR_PHYSICAL_CHANNEL_INVALID_V071 = -2,
   STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 = -1,
@@ -84,7 +90,7 @@ inline int stellarPhysicalScaleFromNameV071(const std::string &name)
   return STELLAR_PHYSICAL_SCALE_INVALID_V071;
 }
 
-inline StellarPhysicalSampleV071 evaluateStellarPhysicalSampleV071(
+STELLAR_PHYSICAL_HD inline StellarPhysicalSampleV071 evaluateStellarPhysicalSampleV071(
     const StellarTransferParameters &parameters, const double position[3],
     float density_log10_plus_10, float temperature_kelvin,
     const float velocity_cm_per_s[3], float entropy_proxy,
@@ -163,7 +169,7 @@ inline StellarPhysicalSampleV071 evaluateStellarPhysicalSampleV071(
   return output;
 }
 
-inline float stellarPhysicalValueV071(
+STELLAR_PHYSICAL_HD inline float stellarPhysicalValueV071(
     const StellarPhysicalSampleV071 &sample, int channel)
 {
   switch(channel) {
@@ -184,7 +190,7 @@ inline float stellarPhysicalValueV071(
   return 0.0f;
 }
 
-inline float stellarPhysicalTransformV071(
+STELLAR_PHYSICAL_HD inline float stellarPhysicalTransformV071(
     float value, const StellarPhysicalTransferV071 &parameters)
 {
   if(parameters.scale == STELLAR_PHYSICAL_SCALE_LOG10_V071)
@@ -195,7 +201,7 @@ inline float stellarPhysicalTransformV071(
   return value;
 }
 
-inline void stellarCopperBlueV071(float fraction, float output[3])
+STELLAR_PHYSICAL_HD inline void stellarCopperBlueV071(float fraction, float output[3])
 {
   const float stops[4][3] = {
       {0.027451f, 0.062745f, 0.109804f},
@@ -210,7 +216,7 @@ inline void stellarCopperBlueV071(float fraction, float output[3])
         (stops[left + 1][component] - stops[left][component]);
 }
 
-inline StellarOpticalSample evaluateStellarPhysicalOpticalV071(
+STELLAR_PHYSICAL_HD inline StellarOpticalSample evaluateStellarPhysicalOpticalV071(
     const StellarPhysicalSampleV071 &sample,
     const StellarPhysicalTransferV071 &parameters)
 {
@@ -231,5 +237,7 @@ inline StellarOpticalSample evaluateStellarPhysicalOpticalV071(
   output.extinction_per_cm = parameters.extinction_per_cm * amplitude;
   return output;
 }
+
+#undef STELLAR_PHYSICAL_HD
 
 #endif

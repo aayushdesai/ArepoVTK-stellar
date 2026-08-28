@@ -6,6 +6,12 @@
 
 #include "stellar_physical_channel_v071.h"
 
+#ifdef __CUDACC__
+#define STELLAR_PHYSICAL_HD __host__ __device__
+#else
+#define STELLAR_PHYSICAL_HD
+#endif
+
 enum StellarPhysicalChannelV072 {
   STELLAR_PHYSICAL_CHANNEL_MAGNETIC_FIELD_AXIAL_V072 = 13,
   STELLAR_PHYSICAL_CHANNEL_MAGNETIC_FIELD_AZIMUTHAL_V072 = 14,
@@ -72,13 +78,13 @@ inline int stellarPhysicalChannelFromNameV072(const std::string &name)
   return STELLAR_PHYSICAL_CHANNEL_INVALID_V071;
 }
 
-inline bool stellarPhysicalChannelRequiresAuxiliaryV072(int channel)
+STELLAR_PHYSICAL_HD inline bool stellarPhysicalChannelRequiresAuxiliaryV072(int channel)
 {
   return channel == STELLAR_PHYSICAL_CHANNEL_MAGNETIC_FIELD_STRENGTH_V071 ||
       channel == STELLAR_PHYSICAL_CHANNEL_ENTROPY_PROXY_V071 || channel >= 13;
 }
 
-inline StellarExtendedPhysicalSampleV072 evaluateStellarExtendedPhysicalSampleV072(
+STELLAR_PHYSICAL_HD inline StellarExtendedPhysicalSampleV072 evaluateStellarExtendedPhysicalSampleV072(
     const StellarTransferParameters &parameters, const double position[3],
     const float velocity_cm_per_s[3], const StellarPhysicalSampleV071 &base,
     const StellarAuxiliaryFieldsV072 &auxiliary)
@@ -151,7 +157,7 @@ inline StellarExtendedPhysicalSampleV072 evaluateStellarExtendedPhysicalSampleV0
   return output;
 }
 
-inline float stellarPhysicalValueV072(
+STELLAR_PHYSICAL_HD inline float stellarPhysicalValueV072(
     const StellarPhysicalSampleV071 &base,
     const StellarExtendedPhysicalSampleV072 &extended, int channel)
 {
@@ -188,7 +194,7 @@ inline float stellarPhysicalValueV072(
   return 0.0f;
 }
 
-inline StellarOpticalSample evaluateStellarPhysicalOpticalV072(
+STELLAR_PHYSICAL_HD inline StellarOpticalSample evaluateStellarPhysicalOpticalV072(
     const StellarPhysicalSampleV071 &base,
     const StellarExtendedPhysicalSampleV072 &extended,
     const StellarPhysicalTransferV071 &parameters)
@@ -210,5 +216,7 @@ inline StellarOpticalSample evaluateStellarPhysicalOpticalV072(
   output.extinction_per_cm = parameters.extinction_per_cm * amplitude;
   return output;
 }
+
+#undef STELLAR_PHYSICAL_HD
 
 #endif
