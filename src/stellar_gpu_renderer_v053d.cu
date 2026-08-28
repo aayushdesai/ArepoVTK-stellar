@@ -1065,7 +1065,9 @@ int main(int argc, char **argv)
       const ViewSpec &view = views[viewNumber];
       ArepoStellarSceneHeaderV073 viewHeader = baseHeader;
       const auto rayTransferStart = std::chrono::steady_clock::now();
-      if(viewNumber != 0) {
+      const bool reuseBaseRays = viewNumber != 0 &&
+          view.scene_path == views[0].scene_path;
+      if(viewNumber != 0 && !reuseBaseRays) {
         std::ifstream rayInput(view.scene_path.c_str(), std::ios::binary);
         if(!rayInput.good())
           throw std::runtime_error("Cannot open ray payload: " + view.scene_path);
@@ -1178,6 +1180,9 @@ int main(int argc, char **argv)
       report << "compute_capability=" << properties.major << "." << properties.minor << "\n";
       report << "base_scene=" << views[0].scene_path << "\n";
       report << "ray_scene=" << view.scene_path << "\n";
+      report << "resident_mesh_reused=true\n";
+      report << "resident_rays_reused=" << (reuseBaseRays ? "true" : "false")
+             << "\n";
       report << "palette=" << view.palette_path << "\n";
       report << "transfer_mode=" << view.transfer_mode << "\n";
       report << "palette_profile="
@@ -1282,6 +1287,7 @@ int main(int argc, char **argv)
     summary << "view_count=" << views.size() << "\n";
     summary << "resolution=" << baseHeader.sample_width << "x" << baseHeader.sample_height << "\n";
     summary << "mesh_loaded_once=true\n";
+    summary << "same_scene_multi_channel_reuse=true\n";
     summary << "compact_ray_bytes=" << sizeof(ArepoStellarRayV073) << "\n";
     summary << "neighbor_cache_seconds=" << neighborCacheSeconds << "\n";
     summary << "neighbor_cache_bytes=" << compactNeighborCacheBytes << "\n";

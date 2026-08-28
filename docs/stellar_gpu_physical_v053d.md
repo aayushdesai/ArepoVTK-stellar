@@ -47,4 +47,6 @@ c++ -std=c++11 -O2 -Isrc tests/test_stellar_gpu_physical_contract_v053d.cpp \
 For movie generation, export each simulation snapshot once as a full v073
 scene at the selected camera row, then render all channel manifests from that
 immutable scene. Ray-only payloads remain available for multiple camera views
-of one resident mesh.
+of one resident mesh. Repeating the base-scene path on later manifest rows
+reuses both its resident mesh and rays, so all 24 channels share one scene
+transfer and one neighbor-cache build.
