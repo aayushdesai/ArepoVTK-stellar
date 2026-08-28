@@ -54,7 +54,7 @@ const char *framingText()
       "4444444444444444444444444444444444444444444444444444444444444444 "
       "5555555555555555555555555555555555555555555555555555555555555555\n"
       "bipolar_reveal continuous_story 105 104 106 smootherstep bipolar_union "
-      "polar_positive-polar_negative 0.25 0.98 0.80 0.80 -0.05 0.35 2.0 90 "
+      "polar_positive,polar_negative 0.25 0.98 0.80 0.80 -0.05 0.35 2.0 90 "
       "6666666666666666666666666666666666666666666666666666666666666666 "
       "7777777777777777777777777777777777777777777777777777777777777777 "
       "8888888888888888888888888888888888888888888888888888888888888888 "
@@ -139,7 +139,7 @@ int main()
   assert(shots.size() == 1);
   assert(framing.size() == 2);
   assert(framing[1].feature_mode == "bipolar_union");
-  assert(framing[1].features == "polar_positive-polar_negative");
+  assert(framing[1].features == "polar_positive,polar_negative");
 
   StellarCameraFilterParameters filter = stellarDefaultCameraFilter();
   filter.minimum_half_extent_cm = 1000.0;
@@ -238,7 +238,7 @@ int main()
          std::string::npos);
   assert(manifest.find("transitions.hard_cuts_allowed=false") !=
          std::string::npos);
-  assert(manifest.find("signed_framing.1.features=polar_positive-polar_negative") !=
+  assert(manifest.find("signed_framing.1.features=polar_positive,polar_negative") !=
          std::string::npos);
   assert(manifest.find("signed_framing.1.framing_plan_sha256=66666666") !=
          std::string::npos);
@@ -290,6 +290,17 @@ int main()
   overlap.replace(overlap.find(old_window), old_window.size(), new_window);
   assert(!loadFraming(overlap, &invalid_framing, &error));
   assert(error.find("nonoverlapping") != std::string::npos);
+
+  std::string noncanonical_bipolar = framingText();
+  const std::string canonical_features =
+      "polar_positive,polar_negative";
+  const std::string rewritten_features =
+      "polar_positive-polar_negative";
+  noncanonical_bipolar.replace(noncanonical_bipolar.find(canonical_features),
+                               canonical_features.size(),
+                               rewritten_features);
+  assert(!loadFraming(noncanonical_bipolar, &invalid_framing, &error));
+  assert(error.find("preserve both signed lobes") != std::string::npos);
 
   std::string missing_source = framingText();
   const std::string old_source = "disk_recenter continuous_story 102";

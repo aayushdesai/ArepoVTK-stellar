@@ -34,7 +34,8 @@ name shot_name source_snapshot transition_start transition_end easing feature_mo
 ```
 
 `feature_mode` is `single` or `bipolar_union`. Bipolar rows must retain both
-`polar_positive-polar_negative` members. Coverage is the v067 `0.90` or `0.98`
+canonical v067 members as `polar_positive,polar_negative`; alternate spellings
+are rejected. Coverage is the v067 `0.90` or `0.98`
 central interval. Every SHA-256 value is required and is copied into the native
 direction manifest for operations to verify against the exact v067 plan,
 source image, source v055 path, and source path row.

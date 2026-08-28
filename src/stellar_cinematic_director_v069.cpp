@@ -878,7 +878,6 @@ bool stellarDirectorLoadSignedFramingV069(
     if(!safeToken(row.name) || !safeToken(row.shot_name) || row.easing < 0 ||
        (row.feature_mode != "single" &&
         row.feature_mode != "bipolar_union") ||
-       !safeToken(row.features) ||
        !parseUnsigned(value[2], &row.source_snapshot) ||
        !parseUnsigned(value[3], &row.transition_start_snapshot) ||
        !parseUnsigned(value[4], &row.transition_end_snapshot) ||
@@ -907,11 +906,13 @@ bool stellarDirectorLoadSignedFramingV069(
        !(row.source_screen_half_extent_cm > 0.0))
       return fail(error, "Signed framing controls are out of range at line " +
                   std::to_string(line_number));
-    if(row.feature_mode == "single" && row.features.find('-') != std::string::npos)
+    if(row.feature_mode == "single" &&
+       (!safeToken(row.features) ||
+        row.features.find('-') != std::string::npos))
       return fail(error, "Single signed framing requires one feature at line " +
                   std::to_string(line_number));
     if(row.feature_mode == "bipolar_union" &&
-       row.features != "polar_positive-polar_negative")
+       row.features != "polar_positive,polar_negative")
       return fail(error, "Bipolar signed framing must preserve both signed lobes at line " +
                   std::to_string(line_number));
     if(!framing->empty()) {
