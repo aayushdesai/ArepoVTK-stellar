@@ -4,3 +4,5 @@ arepo/
 libpng/
 output/
 validation/
+__pycache__/
+._*
