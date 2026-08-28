@@ -6,8 +6,9 @@
 #include "fileio_img.h"
 #include "ArepoRT.h"
 #include "spectrum.h"
+#include "stellar_display_encoding_v053b.h"
 
-#define TO_BYTE(v) (uint8_t (Clamp(255.f   * powf((v), 1.0f/2.3f), 0.0f, 255.0f)))
+#define TO_BYTE(v) stellarDisplayEncodeByteV053b(v)
 #define TO_WORD(v) (uint16_t(Clamp(65535.f * powf((v), 1.0f/2.3f), 0.0f, 65535.0f)))
 
 // TGA:
