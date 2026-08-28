@@ -12,7 +12,7 @@
 
 #include "transfer.h"
 #include "stellar_render_model_v052a.h"
-#include "stellar_physical_channel_v071.h"
+#include "stellar_physical_channel_v072.h"
 #include "stellar_reconstruction_v053.h"
 #include "voronoi_3db.h"
 
@@ -27,6 +27,7 @@ void addValsContribution( vector<float> &vals, int SphP_ind, double weight,
 // initialization rewrites Utherm through the conserved-energy path.
 extern vector<float> RenderTemperature;
 extern vector<unsigned long long> RenderParticleID;
+extern vector<StellarAuxiliaryFieldsV072> RenderPhysicalAuxiliary;
 
 // Arepo: main interface with Arepo to load a snapshot, create data structures, and return
 class Arepo

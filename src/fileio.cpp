@@ -5,7 +5,7 @@
 
 #include "fileio.h"
 #include "fileio_img.h"
-#include "stellar_physical_channel_v071.h"
+#include "stellar_physical_channel_v072.h"
 
 // ConfigSet
 void ConfigSet::ReadFile(string cfgfile)
@@ -231,7 +231,7 @@ void ConfigSet::ReadFile(string cfgfile)
         stellarFeatureProfile != "stellar_structures_v065")
       terminate("Config: unknown stellarFeatureProfile.");
     const int physicalChannel =
-        stellarPhysicalChannelFromNameV071(stellarPhysicalChannel);
+        stellarPhysicalChannelFromNameV072(stellarPhysicalChannel);
     const int physicalScale =
         stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
     if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
@@ -244,6 +244,9 @@ void ConfigSet::ReadFile(string cfgfile)
          stellarPhysicalOpacity < 0.0f ||
          !(stellarPhysicalEmission > 0.0f)))
       terminate("Config: invalid stellar physical-channel transfer parameter.");
+    if (stellarPhysicalChannelRequiresAuxiliaryV072(physicalChannel) &&
+        stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI)
+      terminate("Config: auxiliary physical channels require native Voronoi reconstruction.");
     const bool structureFluxProfile =
         stellarPaletteProfile == "structure_flux_balanced_v068" ||
         stellarPaletteProfile == "structure_flux_vivid_v068" ||

@@ -18,6 +18,7 @@ void ArepoSnapshot::read_ic()
 
   RenderTemperature.clear();
   RenderParticleID.clear();
+  RenderPhysicalAuxiliary.clear();
   
   // locate file(s) and store list of all snapshot files
   vector<string> snapFilenames;
@@ -332,8 +333,23 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
       }
       if(RenderTemperature.size() < offset + quantity.size())
         RenderTemperature.resize(offset + quantity.size());
+      if(RenderPhysicalAuxiliary.size() < offset + quantity.size())
+        RenderPhysicalAuxiliary.resize(offset + quantity.size());
       for(j = 0; j < quantity.size(); j++)
         RenderTemperature[offset + j] = quantity[j];
+
+      if(groupExists(snapFilenames[i], groupName, "Pressure")) {
+        readGroupDatasetSelect(snapFilenames[i], groupName, "Pressure", coord,
+                               -1, quantity);
+        for(j = 0; j < quantity.size(); j++)
+          RenderPhysicalAuxiliary[offset + j].pressure_dyn_cm2 = quantity[j];
+      }
+      if(groupExists(snapFilenames[i], groupName, "SoundSpeed")) {
+        readGroupDatasetSelect(snapFilenames[i], groupName, "SoundSpeed", coord,
+                               -1, quantity);
+        for(j = 0; j < quantity.size(); j++)
+          RenderPhysicalAuxiliary[offset + j].sound_speed_cm_per_s = quantity[j];
+      }
         
       // ElectrunAbundance (Ne)
       if( groupExists(snapFilenames[i], groupName, "ElectronAbundance") )
@@ -371,6 +387,28 @@ void ArepoSnapshot::loadAllChunksWithMask(string maskFileName, vector<string> sn
         }
       }
       */
+
+      if(groupExists(snapFilenames[i], groupName, "MagneticField")) {
+        for(k = 0; k < 3; k++) {
+          readGroupDatasetSelect(snapFilenames[i], groupName, "MagneticField",
+                                 coord, k, quantity);
+          for(j = 0; j < quantity.size(); j++) {
+            SphP[offset + j].VelVertex[k] = quantity[j];
+            RenderPhysicalAuxiliary[offset + j].magnetic_field_gauss[k] =
+                quantity[j];
+          }
+        }
+        const double unitMagneticFieldMicrogauss = All.HubbleParam *
+            sqrt(All.UnitPressure_in_cgs) / (All.Time * All.Time) * 1.0e6;
+        for(j = 0; j < quantity.size(); j++) {
+          for(k = 0; k < 3; k++)
+            SphP[offset + j].VelVertex[k] *= unitMagneticFieldMicrogauss;
+          SphP[offset + j].VelVertex[0] = sqrt(
+              SphP[offset + j].VelVertex[0] * SphP[offset + j].VelVertex[0] +
+              SphP[offset + j].VelVertex[1] * SphP[offset + j].VelVertex[1] +
+              SphP[offset + j].VelVertex[2] * SphP[offset + j].VelVertex[2]);
+        }
+      }
     } // readPartType==1
     
     // increment global snapshot offset as we move to next chunk
@@ -630,8 +668,21 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
       }
       if(RenderTemperature.size() < offset + quantity.size())
         RenderTemperature.resize(offset + quantity.size());
+      if(RenderPhysicalAuxiliary.size() < offset + quantity.size())
+        RenderPhysicalAuxiliary.resize(offset + quantity.size());
       for(j = 0; j < quantity.size(); j++)
         RenderTemperature[offset + j] = quantity[j];
+
+      if(groupExists(snapFilenames[i], groupName, "Pressure")) {
+        readGroupDataset(snapFilenames[i], groupName, "Pressure", -1, quantity);
+        for(j = 0; j < quantity.size(); j++)
+          RenderPhysicalAuxiliary[offset + j].pressure_dyn_cm2 = quantity[j];
+      }
+      if(groupExists(snapFilenames[i], groupName, "SoundSpeed")) {
+        readGroupDataset(snapFilenames[i], groupName, "SoundSpeed", -1, quantity);
+        for(j = 0; j < quantity.size(); j++)
+          RenderPhysicalAuxiliary[offset + j].sound_speed_cm_per_s = quantity[j];
+      }
         
       // ElectrunAbundance (Ne)
       if( groupExists(snapFilenames[i], groupName, "ElectronAbundance") )
@@ -677,8 +728,11 @@ void ArepoSnapshot::loadAllChunksNoMask(vector<string> snapFilenames)
         {
           readGroupDataset( snapFilenames[i], groupName, "MagneticField", k, quantity );
           
-          for( j=0; j < quantity.size(); j++ )
+          for( j=0; j < quantity.size(); j++ ) {
             SphP[offset + j].VelVertex[k] = quantity[j];
+            RenderPhysicalAuxiliary[offset + j].magnetic_field_gauss[k] =
+                quantity[j];
+          }
         }
 
         // convert to physical microGauss

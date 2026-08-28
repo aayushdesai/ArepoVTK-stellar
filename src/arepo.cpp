@@ -16,6 +16,7 @@
 
 vector<float> RenderTemperature;
 vector<unsigned long long> RenderParticleID;
+vector<StellarAuxiliaryFieldsV072> RenderPhysicalAuxiliary;
 
 namespace {
 
@@ -28,12 +29,13 @@ float renderVelocityMagnitude(int particle)
               P[particle].Vel[2] * P[particle].Vel[2]);
 }
 
-void remapRenderTemperatureAfterArepoInit()
+void remapRenderFieldsAfterArepoInit()
 {
   if(!Config.stellarTransferEnabled || RenderTemperature.empty())
     return;
   if(RenderTemperature.size() != RenderParticleID.size() ||
-     RenderTemperature.size() != (size_t)NumGas)
+     RenderTemperature.size() != (size_t)NumGas ||
+     RenderPhysicalAuxiliary.size() != (size_t)NumGas)
     terminate("Stellar render sidecar size mismatch after AREPO initialization.");
 
   size_t mismatched = 0;
@@ -46,22 +48,24 @@ void remapRenderTemperatureAfterArepoInit()
     return;
   }
 
-  unordered_map<unsigned long long, float> temperatureByID;
-  temperatureByID.reserve(RenderParticleID.size());
+  unordered_map<unsigned long long, size_t> sourceIndexByID;
+  sourceIndexByID.reserve(RenderParticleID.size());
   for(size_t particle = 0; particle < RenderParticleID.size(); particle++)
-    if(!temperatureByID.emplace(RenderParticleID[particle],
-                                RenderTemperature[particle]).second)
-      terminate("Duplicate ParticleID while remapping stellar temperature.");
+    if(!sourceIndexByID.emplace(RenderParticleID[particle], particle).second)
+      terminate("Duplicate ParticleID while remapping stellar fields.");
 
-  vector<float> reordered(NumGas);
+  vector<float> reorderedTemperature(NumGas);
+  vector<StellarAuxiliaryFieldsV072> reorderedAuxiliary(NumGas);
   for(int particle = 0; particle < NumGas; particle++) {
-    const unordered_map<unsigned long long, float>::const_iterator found =
-        temperatureByID.find((unsigned long long)P[particle].ID);
-    if(found == temperatureByID.end())
-      terminate("ParticleID missing while remapping stellar temperature.");
-    reordered[particle] = found->second;
+    const unordered_map<unsigned long long, size_t>::const_iterator found =
+        sourceIndexByID.find((unsigned long long)P[particle].ID);
+    if(found == sourceIndexByID.end())
+      terminate("ParticleID missing while remapping stellar fields.");
+    reorderedTemperature[particle] = RenderTemperature[found->second];
+    reorderedAuxiliary[particle] = RenderPhysicalAuxiliary[found->second];
   }
-  RenderTemperature.swap(reordered);
+  RenderTemperature.swap(reorderedTemperature);
+  RenderPhysicalAuxiliary.swap(reorderedAuxiliary);
   RenderParticleID.clear();
   cerr << "STELLAR_SIDECAR_REMAP mismatched=" << mismatched
        << " particles=" << NumGas << endl;
@@ -176,7 +180,7 @@ bool Arepo::LoadSnapshot()
     }
   }
 
-  remapRenderTemperatureAfterArepoInit();
+  remapRenderFieldsAfterArepoInit();
 
   if( Config.readPartType != 0 )
   {
@@ -413,7 +417,7 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarParameters.disk_emissivity_per_cm = Config.stellarDiskEmission;
   stellarParameters.polar_emissivity_per_cm = Config.stellarPolarEmission;
   stellarPhysicalParameters.channel =
-      stellarPhysicalChannelFromNameV071(Config.stellarPhysicalChannel);
+      stellarPhysicalChannelFromNameV072(Config.stellarPhysicalChannel);
   stellarPhysicalParameters.scale =
       stellarPhysicalScaleFromNameV071(Config.stellarPhysicalScale);
   stellarPhysicalParameters.range_min = Config.stellarPhysicalRangeMin;
@@ -426,7 +430,10 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   if(ThisTask == 0 && Config.stellarTransferEnabled) {
     if(stellarPhysicalParameters.channel !=
        STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071)
-      cerr << "STELLAR_PHYSICAL_CHANNEL_V071 channel="
+      cerr << (stellarPhysicalChannelRequiresAuxiliaryV072(
+                   stellarPhysicalParameters.channel) ?
+                   "STELLAR_PHYSICAL_CHANNEL_V072 channel=" :
+                   "STELLAR_PHYSICAL_CHANNEL_V071 channel=")
            << Config.stellarPhysicalChannel
            << " scale=" << Config.stellarPhysicalScale
            << " range=" << Config.stellarPhysicalRangeMin << ","
@@ -1227,8 +1234,20 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
                     stellarParameters, samplePosition, vals[TF_VAL_DENS],
                     vals[TF_VAL_TEMP], stellarVelocity,
                     vals[TF_VAL_ENTROPY], vals[TF_VAL_BMAG]);
-            optical = evaluateStellarPhysicalOpticalV071(
-                physical, stellarPhysicalParameters);
+            if(stellarPhysicalChannelRequiresAuxiliaryV072(
+                   stellarPhysicalParameters.channel)) {
+              if(SphP_ID < 0 || SphP_ID >= (int)RenderPhysicalAuxiliary.size())
+                terminate("Physical auxiliary field index is out of range.");
+              const StellarExtendedPhysicalSampleV072 extended =
+                  evaluateStellarExtendedPhysicalSampleV072(
+                      stellarParameters, samplePosition, stellarVelocity,
+                      physical, RenderPhysicalAuxiliary[SphP_ID]);
+              optical = evaluateStellarPhysicalOpticalV072(
+                  physical, extended, stellarPhysicalParameters);
+            } else {
+              optical = evaluateStellarPhysicalOpticalV071(
+                  physical, stellarPhysicalParameters);
+            }
           }
           const StellarIntegratedSegment segment =
               integrateStellarOpticalSegment(optical, stepSize);
