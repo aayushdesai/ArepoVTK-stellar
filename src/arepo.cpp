@@ -426,6 +426,15 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
       Config.stellarPhysicalSymlogLinthresh;
   stellarPhysicalParameters.extinction_per_cm = Config.stellarPhysicalOpacity;
   stellarPhysicalParameters.emissivity_per_cm = Config.stellarPhysicalEmission;
+  stellarPhysicalOpticalParameters.profile =
+      stellarPhysicalOpticalProfileFromNameV074(
+          Config.stellarPhysicalOpticalProfile);
+  stellarPhysicalOpticalParameters.target_optical_depth =
+      Config.stellarPhysicalTargetOpticalDepth;
+  stellarPhysicalOpticalParameters.target_emission =
+      Config.stellarPhysicalTargetEmission;
+  stellarPhysicalOpticalParameters.reference_path_cm =
+      Config.stellarPhysicalReferencePathCm;
 
   if(ThisTask == 0 && Config.stellarTransferEnabled) {
     if(stellarPhysicalParameters.channel !=
@@ -443,6 +452,27 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
            << " emission=" << Config.stellarPhysicalEmission
            << " palette=copper_blue"
            << " traversal=native_voronoi" << endl;
+    if(stellarPhysicalParameters.channel !=
+       STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071)
+      cerr << "STELLAR_PHYSICAL_OPTICAL_V074 profile="
+           << stellarPhysicalOpticalProfileNameV074(
+                  stellarPhysicalOpticalParameters.profile)
+           << " target_optical_depth="
+           << stellarPhysicalOpticalParameters.target_optical_depth
+           << " target_emission="
+           << stellarPhysicalOpticalParameters.target_emission
+           << " reference_path_cm="
+           << stellarPhysicalReferencePathV074(
+                  stellarPhysicalParameters.channel, stellarParameters,
+                  stellarPhysicalOpticalParameters.reference_path_cm)
+           << " support="
+           << (stellarPhysicalOpticalParameters.profile ==
+                   STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ?
+                   "feature_weighted" : "legacy_amplitude_floor")
+           << " zero_signal_transparent="
+           << (stellarPhysicalOpticalParameters.profile ==
+                   STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ?
+                   "true" : "false") << endl;
     const StellarFeatureProfileStyleV065 featureStyle =
         stellarFeatureProfileStyleV065(stellarParameters.feature_profile);
     cerr << "STELLAR_FEATURE_PROFILE_V065 profile="
@@ -1234,6 +1264,7 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
                     stellarParameters, samplePosition, vals[TF_VAL_DENS],
                     vals[TF_VAL_TEMP], stellarVelocity,
                     vals[TF_VAL_ENTROPY], vals[TF_VAL_BMAG]);
+            float physicalValue = 0.0f;
             if(stellarPhysicalChannelRequiresAuxiliaryV072(
                    stellarPhysicalParameters.channel)) {
               if(SphP_ID < 0 || SphP_ID >= (int)RenderPhysicalAuxiliary.size())
@@ -1242,11 +1273,29 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
                   evaluateStellarExtendedPhysicalSampleV072(
                       stellarParameters, samplePosition, stellarVelocity,
                       physical, RenderPhysicalAuxiliary[SphP_ID]);
-              optical = evaluateStellarPhysicalOpticalV072(
-                  physical, extended, stellarPhysicalParameters);
+              physicalValue = stellarPhysicalValueV072(
+                  physical, extended, stellarPhysicalParameters.channel);
+              if(stellarPhysicalOpticalParameters.profile ==
+                 STELLAR_PHYSICAL_OPTICAL_LEGACY_V072)
+                optical = evaluateStellarPhysicalOpticalV072(
+                    physical, extended, stellarPhysicalParameters);
             } else {
-              optical = evaluateStellarPhysicalOpticalV071(
-                  physical, stellarPhysicalParameters);
+              physicalValue = stellarPhysicalValueV071(
+                  physical, stellarPhysicalParameters.channel);
+              if(stellarPhysicalOpticalParameters.profile ==
+                 STELLAR_PHYSICAL_OPTICAL_LEGACY_V072)
+                optical = evaluateStellarPhysicalOpticalV071(
+                    physical, stellarPhysicalParameters);
+            }
+            if(stellarPhysicalOpticalParameters.profile ==
+               STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074) {
+              const StellarFeatureSampleV064 feature =
+                  evaluateStellarFeatureSampleV064(
+                      stellarParameters, samplePosition, vals[TF_VAL_DENS],
+                      vals[TF_VAL_TEMP], stellarVelocity);
+              optical = evaluateStellarPhysicalOpticalFromValueV074(
+                  physicalValue, feature, stellarPhysicalParameters,
+                  stellarPhysicalOpticalParameters, stellarParameters);
             }
           }
           const StellarIntegratedSegment segment =

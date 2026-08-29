@@ -4,6 +4,7 @@
  */
 
 #include "fileio.h"
+#include "stellar_physical_optical_v074.h"
 #include "fileio_img.h"
 #include "stellar_physical_channel_v072.h"
 
@@ -126,6 +127,8 @@ void ConfigSet::ReadFile(string cfgfile)
       readValue<string>("stellarPhysicalChannel", "optical");
   stellarPhysicalScale =
       readValue<string>("stellarPhysicalScale", "linear");
+  stellarPhysicalOpticalProfile =
+      readValue<string>("stellarPhysicalOpticalProfile", "legacy_v072");
   const string stellarReconstruction =
       readValue<string>("stellarReconstruction", "sph");
   if (stellarReconstruction == "sph")
@@ -171,6 +174,12 @@ void ConfigSet::ReadFile(string cfgfile)
       readValue<float>("stellarPhysicalOpacity", 1.0e-11f);
   stellarPhysicalEmission =
       readValue<float>("stellarPhysicalEmission", stellarPhysicalOpacity);
+  stellarPhysicalTargetOpticalDepth =
+      readValue<float>("stellarPhysicalTargetOpticalDepth", 1.0f);
+  stellarPhysicalTargetEmission =
+      readValue<float>("stellarPhysicalTargetEmission", 1.0f);
+  stellarPhysicalReferencePathCm =
+      readValue<float>("stellarPhysicalReferencePathCm", 0.0f);
 
   // Animation
   startFrame    = readValue<int>("startFrame",     0);  
@@ -234,16 +243,33 @@ void ConfigSet::ReadFile(string cfgfile)
         stellarPhysicalChannelFromNameV072(stellarPhysicalChannel);
     const int physicalScale =
         stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
+    const int physicalOpticalProfile =
+        stellarPhysicalOpticalProfileFromNameV074(stellarPhysicalOpticalProfile);
     if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
       terminate("Config: unknown stellarPhysicalChannel.");
     if (physicalScale == STELLAR_PHYSICAL_SCALE_INVALID_V071)
       terminate("Config: unknown stellarPhysicalScale.");
+    if (physicalOpticalProfile == STELLAR_PHYSICAL_OPTICAL_INVALID_V074)
+      terminate("Config: unknown stellarPhysicalOpticalProfile.");
     if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
         (!(stellarPhysicalRangeMax > stellarPhysicalRangeMin) ||
          !(stellarPhysicalSymlogLinthresh > 0.0f) ||
          stellarPhysicalOpacity < 0.0f ||
          !(stellarPhysicalEmission > 0.0f)))
       terminate("Config: invalid stellar physical-channel transfer parameter.");
+    if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
+        physicalOpticalProfile ==
+            STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 &&
+        (!(stellarPhysicalTargetOpticalDepth > 0.0f) ||
+         !(stellarPhysicalTargetEmission > 0.0f) ||
+         stellarPhysicalReferencePathCm < 0.0f))
+      terminate("Config: invalid material_support_v074 optical parameter.");
+    if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
+        physicalOpticalProfile ==
+            STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 &&
+        (stellarFeatureProfile != "stellar_structures_v065" ||
+         stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI))
+      terminate("Config: material_support_v074 requires stellar_structures_v065 and native Voronoi reconstruction.");
     if (stellarPhysicalChannelRequiresAuxiliaryV072(physicalChannel) &&
         stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI)
       terminate("Config: auxiliary physical channels require native Voronoi reconstruction.");
