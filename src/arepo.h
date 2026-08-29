@@ -15,6 +15,7 @@
 #include "stellar_physical_channel_v072.h"
 #include "stellar_physical_optical_v076.h"
 #include "stellar_physical_optical_v077.h"
+#include "stellar_physical_optical_v078.h"
 #include "stellar_reconstruction_v053.h"
 #include "voronoi_3db.h"
 

@@ -16,6 +16,7 @@
 #include "stellar_render_model_v052a.h"
 #include "stellar_physical_optical_v076.h"
 #include "stellar_physical_optical_v077.h"
+#include "stellar_physical_optical_v078.h"
 
 // Filter
 
@@ -567,7 +568,7 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
             stellarPhysicalChannelFromNameV072(Config.stellarPhysicalChannel) ==
                     STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 ?
                 STELLAR_PHYSICAL_OPTICAL_LEGACY_V072 :
-                stellarPhysicalOpticalProfileFromNameV077(
+                stellarPhysicalOpticalProfileFromNameV078(
                     Config.stellarPhysicalOpticalProfile);
         StellarPhysicalOpticalParametersV076 opticalParameters = {};
         opticalParameters.profile = physicalOpticalProfile;
@@ -575,7 +576,7 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
             Config.stellarPhysicalTargetOpticalDepth;
         opticalParameters.target_emission =
             Config.stellarPhysicalTargetEmission;
-        stellarDecodePhysicalMomentsV077(
+        stellarDecodePhysicalMomentsV078(
             accumulated, opticalParameters, linear_rgb);
         float mapped[3];
         for(int channel = 0; channel < 3; channel++)

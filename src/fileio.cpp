@@ -7,6 +7,7 @@
 #include "stellar_physical_optical_v075.h"
 #include "stellar_physical_optical_v076.h"
 #include "stellar_physical_optical_v077.h"
+#include "stellar_physical_optical_v078.h"
 #include "fileio_img.h"
 #include "stellar_physical_channel_v072.h"
 
@@ -260,7 +261,7 @@ void ConfigSet::ReadFile(string cfgfile)
     const int physicalScale =
         stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
     const int physicalOpticalProfile =
-        stellarPhysicalOpticalProfileFromNameV077(stellarPhysicalOpticalProfile);
+        stellarPhysicalOpticalProfileFromNameV078(stellarPhysicalOpticalProfile);
     if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
       terminate("Config: unknown stellarPhysicalChannel.");
     if (physicalScale == STELLAR_PHYSICAL_SCALE_INVALID_V071)
@@ -281,7 +282,9 @@ void ConfigSet::ReadFile(string cfgfile)
          physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 ||
          physicalOpticalProfile ==
-             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077) &&
+             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_COMPOSITE_MOMENT_V078) &&
         (!(stellarPhysicalTargetOpticalDepth > 0.0f) ||
          !(stellarPhysicalTargetEmission > 0.0f) ||
          stellarPhysicalReferencePathCm < 0.0f))
@@ -298,7 +301,9 @@ void ConfigSet::ReadFile(string cfgfile)
         (physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 ||
          physicalOpticalProfile ==
-             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077) &&
+             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_COMPOSITE_MOMENT_V078) &&
         (!(stellarPhysicalDensitySupportLog10High >
            stellarPhysicalDensitySupportLog10Low) ||
          stellarPhysicalEmissionSignalFloor < 0.0f ||
@@ -314,7 +319,9 @@ void ConfigSet::ReadFile(string cfgfile)
          physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 ||
          physicalOpticalProfile ==
-             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077) &&
+             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_COMPOSITE_MOMENT_V078) &&
         (stellarFeatureProfile != "stellar_structures_v065" ||
          stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI))
       terminate("Config: supported physical optics requires stellar_structures_v065 and native Voronoi reconstruction.");

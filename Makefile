@@ -30,7 +30,7 @@ CFLAGS += -I${GSL_HOME}/include -I${HDF5_HOME}/include -I./libpng/
 LIBS += -L${GSL_HOME}/lib -L${HDF5_HOME}/lib -L./libpng/
 
 OBJS = ArepoRT.o camera.o fileio.o fileio_img.o geometry.o integrator.o keyframe.o renderer.o sampler.o stellar_camera_path_v055.o transfer.o transform.o util.o volume.o snapio.o
-HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h stellar_camera_path_v055.h stellar_camera_v054.h stellar_feature_framing_v067.h stellar_feature_landmarks_v066.h stellar_feature_profile_v065.h stellar_palette_v057.h stellar_physical_channel_v071.h stellar_physical_channel_v072.h stellar_physical_optical_v074.h stellar_physical_optical_v075.h stellar_physical_optical_v076.h stellar_physical_optical_v077.h stellar_gpu_scene_format_v052.h stellar_gpu_scene_format_v073.h transfer.h transform.h util.h volume.h snapio.h
+HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h stellar_camera_path_v055.h stellar_camera_v054.h stellar_feature_framing_v067.h stellar_feature_landmarks_v066.h stellar_feature_profile_v065.h stellar_palette_v057.h stellar_physical_channel_v071.h stellar_physical_channel_v072.h stellar_physical_optical_v074.h stellar_physical_optical_v075.h stellar_physical_optical_v076.h stellar_physical_optical_v077.h stellar_physical_optical_v078.h stellar_gpu_scene_format_v052.h stellar_gpu_scene_format_v073.h transfer.h transform.h util.h volume.h snapio.h
 MISC_RM = frame.raw.txt frame.tga
 
 # ENABLE_AREPO
@@ -115,6 +115,9 @@ test_stellar_physical_optical_v076: tests/test_stellar_physical_optical_v076.cpp
 test_stellar_physical_optical_v077: tests/test_stellar_physical_optical_v077.cpp src/stellar_physical_optical_v077.h src/stellar_physical_optical_v076.h src/stellar_physical_optical_v075.h src/stellar_physical_optical_v074.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h src/stellar_feature_profile_v065.h src/stellar_palette_v057.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_physical_optical_v077.cpp -o $@
 
+test_stellar_physical_optical_v078: tests/test_stellar_physical_optical_v078.cpp src/stellar_physical_optical_v078.h src/stellar_physical_optical_v077.h src/stellar_physical_optical_v076.h src/stellar_physical_optical_v075.h src/stellar_physical_optical_v074.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h src/stellar_feature_profile_v065.h src/stellar_palette_v057.h
+	$(CC) $(CFLAGS) -Isrc tests/test_stellar_physical_optical_v078.cpp -o $@
+
 test_stellar_gpu_physical_contract_v053d: tests/test_stellar_gpu_physical_contract_v053d.cpp src/stellar_gpu_scene_format_v073.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_gpu_physical_contract_v053d.cpp -o $@
 
@@ -126,6 +129,9 @@ test_stellar_gpu_physical_contract_v053f: tests/test_stellar_gpu_physical_contra
 
 test_stellar_gpu_physical_contract_v053g: tests/test_stellar_gpu_physical_contract_v053g.cpp src/stellar_gpu_profile_contract_v053g.h src/stellar_gpu_profile_contract_v053f.h src/stellar_gpu_profile_contract_v053d.h src/stellar_physical_optical_v077.h src/stellar_physical_optical_v076.h src/stellar_physical_optical_v075.h src/stellar_physical_optical_v074.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_gpu_physical_contract_v053g.cpp -o $@
+
+test_stellar_gpu_physical_contract_v053h: tests/test_stellar_gpu_physical_contract_v053h.cpp src/stellar_gpu_profile_contract_v053h.h src/stellar_gpu_profile_contract_v053g.h src/stellar_gpu_profile_contract_v053f.h src/stellar_gpu_profile_contract_v053d.h src/stellar_physical_optical_v078.h src/stellar_physical_optical_v077.h src/stellar_physical_optical_v076.h src/stellar_physical_optical_v075.h src/stellar_physical_optical_v074.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h
+	$(CC) $(CFLAGS) -Isrc tests/test_stellar_gpu_physical_contract_v053h.cpp -o $@
 
 test_stellar_gpu_ray_status_v053b: tests/test_stellar_gpu_ray_status_v053b.cpp src/stellar_gpu_ray_status_v053b.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_gpu_ray_status_v053b.cpp -o $@
@@ -161,7 +167,7 @@ $(OBJS): | libarepo.a
 
 clean:
 	+$(MAKE) -C arepo clean
-	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 stellar_camera_director_v059 stellar_camera_director_v060 stellar_camera_director_v061 stellar_camera_director_v062 stellar_camera_director_v063 stellar_camera_director_v069 stellar_feature_probe_v064 test_stellar_cinematic_director_v059 test_stellar_cinematic_director_v060 test_stellar_cinematic_director_v061 test_stellar_cinematic_director_v062 test_stellar_cinematic_director_v063 test_stellar_cinematic_director_v069 test_stellar_palette_v057 test_stellar_palette_v058 test_stellar_optical_profile_v068 test_stellar_optical_profile_v070 test_stellar_physical_channel_v071 test_stellar_physical_channel_v072 test_stellar_physical_optical_v074 test_stellar_physical_optical_v075 test_stellar_physical_optical_v076 test_stellar_physical_optical_v077 test_stellar_gpu_physical_contract_v053d test_stellar_gpu_physical_contract_v053e test_stellar_gpu_physical_contract_v053f test_stellar_gpu_physical_contract_v053g test_stellar_gpu_ray_status_v053b test_stellar_gpu_output_parity_v053b test_stellar_gpu_geometry_v053b test_stellar_gpu_profile_contract_v053c test_stellar_feature_diagnostics_v064 test_stellar_feature_profile_v065 test_stellar_feature_landmarks_v066 test_stellar_feature_framing_v067 $(MISC_RM)
+	rm -f $(OBJS) $(EXECNAME) stellar_camera_director_v056 stellar_camera_director_v059 stellar_camera_director_v060 stellar_camera_director_v061 stellar_camera_director_v062 stellar_camera_director_v063 stellar_camera_director_v069 stellar_feature_probe_v064 test_stellar_cinematic_director_v059 test_stellar_cinematic_director_v060 test_stellar_cinematic_director_v061 test_stellar_cinematic_director_v062 test_stellar_cinematic_director_v063 test_stellar_cinematic_director_v069 test_stellar_palette_v057 test_stellar_palette_v058 test_stellar_optical_profile_v068 test_stellar_optical_profile_v070 test_stellar_physical_channel_v071 test_stellar_physical_channel_v072 test_stellar_physical_optical_v074 test_stellar_physical_optical_v075 test_stellar_physical_optical_v076 test_stellar_physical_optical_v077 test_stellar_physical_optical_v078 test_stellar_gpu_physical_contract_v053d test_stellar_gpu_physical_contract_v053e test_stellar_gpu_physical_contract_v053f test_stellar_gpu_physical_contract_v053g test_stellar_gpu_physical_contract_v053h test_stellar_gpu_ray_status_v053b test_stellar_gpu_output_parity_v053b test_stellar_gpu_geometry_v053b test_stellar_gpu_profile_contract_v053c test_stellar_feature_diagnostics_v064 test_stellar_feature_profile_v065 test_stellar_feature_landmarks_v066 test_stellar_feature_framing_v067 $(MISC_RM)
 
 build/%.o: src/%.cpp
 	$(CC) $(CFLAGS) $(OPT) -c $< -o $@
