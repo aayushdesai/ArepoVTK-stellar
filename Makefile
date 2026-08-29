@@ -30,7 +30,7 @@ CFLAGS += -I${GSL_HOME}/include -I${HDF5_HOME}/include -I./libpng/
 LIBS += -L${GSL_HOME}/lib -L${HDF5_HOME}/lib -L./libpng/
 
 OBJS = ArepoRT.o camera.o fileio.o fileio_img.o geometry.o integrator.o keyframe.o renderer.o sampler.o stellar_camera_path_v055.o transfer.o transform.o util.o volume.o snapio.o
-HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h stellar_camera_path_v055.h stellar_camera_v054.h stellar_feature_framing_v067.h stellar_feature_landmarks_v066.h stellar_feature_profile_v065.h stellar_palette_v057.h stellar_physical_channel_v071.h stellar_physical_channel_v072.h stellar_physical_optical_v074.h stellar_gpu_scene_format_v052.h stellar_gpu_scene_format_v073.h transfer.h transform.h util.h volume.h snapio.h
+HEAD = ArepoRT.h camera.h fileio.h fileio_img.h geometry.h integrator.h keyframe.h renderer.h sampler.h spectrum.h stellar_camera_path_v055.h stellar_camera_v054.h stellar_feature_framing_v067.h stellar_feature_landmarks_v066.h stellar_feature_profile_v065.h stellar_palette_v057.h stellar_physical_channel_v071.h stellar_physical_channel_v072.h stellar_physical_optical_v074.h stellar_physical_optical_v075.h stellar_gpu_scene_format_v052.h stellar_gpu_scene_format_v073.h transfer.h transform.h util.h volume.h snapio.h
 MISC_RM = frame.raw.txt frame.tga
 
 # ENABLE_AREPO
@@ -105,6 +105,9 @@ test_stellar_physical_channel_v072: tests/test_stellar_physical_channel_v072.cpp
 
 test_stellar_physical_optical_v074: tests/test_stellar_physical_optical_v074.cpp src/stellar_physical_optical_v074.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h src/stellar_feature_profile_v065.h src/stellar_palette_v057.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_physical_optical_v074.cpp -o $@
+
+test_stellar_physical_optical_v075: tests/test_stellar_physical_optical_v075.cpp src/stellar_physical_optical_v075.h src/stellar_physical_optical_v074.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h src/stellar_feature_profile_v065.h src/stellar_palette_v057.h
+	$(CC) $(CFLAGS) -Isrc tests/test_stellar_physical_optical_v075.cpp -o $@
 
 test_stellar_gpu_physical_contract_v053d: tests/test_stellar_gpu_physical_contract_v053d.cpp src/stellar_gpu_scene_format_v073.h src/stellar_physical_channel_v072.h src/stellar_physical_channel_v071.h src/stellar_render_model_v052a.h
 	$(CC) $(CFLAGS) -Isrc tests/test_stellar_gpu_physical_contract_v053d.cpp -o $@

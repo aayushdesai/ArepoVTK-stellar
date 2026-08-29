@@ -567,7 +567,9 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
                            0.0722f * mapped[2];
         for(int channel = 0; channel < 3; channel++)
           rgb[3 * offset + channel] = Clamp(
-              luma + Config.stellarSaturation * (mapped[channel] - luma), 0.0f, 1.0f);
+              Config.stellarDisplayBrightness *
+                  (luma + Config.stellarSaturation *
+                   (mapped[channel] - luma)), 0.0f, 1.0f);
       } else {
         rgb[3*offset  ] = (rgb[3*offset  ] - Config.minScale) * invFac;
         rgb[3*offset+1] = (rgb[3*offset+1] - Config.minScale) * invFac;

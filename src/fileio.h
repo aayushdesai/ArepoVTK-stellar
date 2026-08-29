@@ -78,11 +78,14 @@ public:
   float stellarMergerOpacity, stellarDiskOpacity, stellarPolarOpacity;
   float stellarMergerEmission, stellarDiskEmission, stellarPolarEmission;
   float stellarExposure, stellarBlackPoint, stellarSaturation;
+  float stellarDisplayBrightness;
   float stellarPhysicalRangeMin, stellarPhysicalRangeMax;
   float stellarPhysicalSymlogLinthresh;
   float stellarPhysicalOpacity, stellarPhysicalEmission;
   float stellarPhysicalTargetOpticalDepth, stellarPhysicalTargetEmission;
   float stellarPhysicalReferencePathCm;
+  float stellarPhysicalOpacitySignalThreshold, stellarPhysicalColorGamma;
+  int stellarPhysicalColorInvert;
   
   // Animation
   vector<string> kfSet; // key frames

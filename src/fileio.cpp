@@ -4,7 +4,7 @@
  */
 
 #include "fileio.h"
-#include "stellar_physical_optical_v074.h"
+#include "stellar_physical_optical_v075.h"
 #include "fileio_img.h"
 #include "stellar_physical_channel_v072.h"
 
@@ -164,6 +164,8 @@ void ConfigSet::ReadFile(string cfgfile)
   stellarExposure = readValue<float>("stellarExposure", 1.4f);
   stellarBlackPoint = readValue<float>("stellarBlackPoint", 0.002f);
   stellarSaturation = readValue<float>("stellarSaturation", 0.82f);
+  stellarDisplayBrightness =
+      readValue<float>("stellarDisplayBrightness", 1.0f);
   stellarPhysicalRangeMin =
       readValue<float>("stellarPhysicalRangeMin", 0.0f);
   stellarPhysicalRangeMax =
@@ -180,6 +182,12 @@ void ConfigSet::ReadFile(string cfgfile)
       readValue<float>("stellarPhysicalTargetEmission", 1.0f);
   stellarPhysicalReferencePathCm =
       readValue<float>("stellarPhysicalReferencePathCm", 0.0f);
+  stellarPhysicalOpacitySignalThreshold =
+      readValue<float>("stellarPhysicalOpacitySignalThreshold", 0.02f);
+  stellarPhysicalColorGamma =
+      readValue<float>("stellarPhysicalColorGamma", 1.0f);
+  stellarPhysicalColorInvert =
+      readValue<int>("stellarPhysicalColorInvert", 0);
 
   // Animation
   startFrame    = readValue<int>("startFrame",     0);  
@@ -244,7 +252,7 @@ void ConfigSet::ReadFile(string cfgfile)
     const int physicalScale =
         stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
     const int physicalOpticalProfile =
-        stellarPhysicalOpticalProfileFromNameV074(stellarPhysicalOpticalProfile);
+        stellarPhysicalOpticalProfileFromNameV075(stellarPhysicalOpticalProfile);
     if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
       terminate("Config: unknown stellarPhysicalChannel.");
     if (physicalScale == STELLAR_PHYSICAL_SCALE_INVALID_V071)
@@ -258,18 +266,30 @@ void ConfigSet::ReadFile(string cfgfile)
          !(stellarPhysicalEmission > 0.0f)))
       terminate("Config: invalid stellar physical-channel transfer parameter.");
     if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
-        physicalOpticalProfile ==
-            STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 &&
+        (physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075) &&
         (!(stellarPhysicalTargetOpticalDepth > 0.0f) ||
          !(stellarPhysicalTargetEmission > 0.0f) ||
          stellarPhysicalReferencePathCm < 0.0f))
-      terminate("Config: invalid material_support_v074 optical parameter.");
+      terminate("Config: invalid path-normalized physical optical parameter.");
     if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
         physicalOpticalProfile ==
-            STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 &&
+            STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075 &&
+        (!(stellarPhysicalOpacitySignalThreshold > 0.0f) ||
+         stellarPhysicalOpacitySignalThreshold > 1.0f ||
+         !(stellarPhysicalColorGamma > 0.0f) ||
+         (stellarPhysicalColorInvert != 0 && stellarPhysicalColorInvert != 1)))
+      terminate("Config: invalid separated_support_v075 parameter.");
+    if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
+        (physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075) &&
         (stellarFeatureProfile != "stellar_structures_v065" ||
          stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI))
-      terminate("Config: material_support_v074 requires stellar_structures_v065 and native Voronoi reconstruction.");
+      terminate("Config: supported physical optics requires stellar_structures_v065 and native Voronoi reconstruction.");
     if (stellarPhysicalChannelRequiresAuxiliaryV072(physicalChannel) &&
         stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI)
       terminate("Config: auxiliary physical channels require native Voronoi reconstruction.");
@@ -294,7 +314,7 @@ void ConfigSet::ReadFile(string cfgfile)
         stellarPolarOpacity < 0.0f || !(stellarMergerEmission > 0.0f) ||
         !(stellarDiskEmission > 0.0f) || !(stellarPolarEmission > 0.0f) ||
         !(stellarExposure > 0.0f) || stellarBlackPoint < 0.0f ||
-        stellarSaturation < 0.0f)
+        stellarSaturation < 0.0f || !(stellarDisplayBrightness > 0.0f))
       terminate("Config: invalid stellar transfer or display parameter.");
   }
     
