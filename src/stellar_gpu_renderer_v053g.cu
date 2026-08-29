@@ -873,7 +873,7 @@ std::vector<ViewSpec> loadViewManifest(const std::string &filename)
       throw std::runtime_error("View manifest row has extra columns: " + line);
     if(view.index != int(views.size()))
       throw std::runtime_error("View manifest indices must be contiguous from zero.");
-    if(!stellarGpuProfileContractValidV053f(
+    if(!stellarGpuProfileContractValidV053g(
            view.transfer_mode, view.palette_profile, view.feature_profile,
            view.physical_optical.profile))
       throw std::runtime_error("Invalid stellar profile contract: " + line);
