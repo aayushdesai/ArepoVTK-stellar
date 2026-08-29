@@ -5,6 +5,7 @@
 
 #include "fileio.h"
 #include "stellar_physical_optical_v075.h"
+#include "stellar_physical_optical_v076.h"
 #include "fileio_img.h"
 #include "stellar_physical_channel_v072.h"
 
