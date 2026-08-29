@@ -188,6 +188,12 @@ void ConfigSet::ReadFile(string cfgfile)
       readValue<float>("stellarPhysicalColorGamma", 1.0f);
   stellarPhysicalColorInvert =
       readValue<int>("stellarPhysicalColorInvert", 0);
+  stellarPhysicalDensitySupportLog10Low =
+      readValue<float>("stellarPhysicalDensitySupportLog10Low", -9.0f);
+  stellarPhysicalDensitySupportLog10High =
+      readValue<float>("stellarPhysicalDensitySupportLog10High", -5.0f);
+  stellarPhysicalEmissionSignalFloor =
+      readValue<float>("stellarPhysicalEmissionSignalFloor", 0.25f);
 
   // Animation
   startFrame    = readValue<int>("startFrame",     0);  
@@ -252,7 +258,7 @@ void ConfigSet::ReadFile(string cfgfile)
     const int physicalScale =
         stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
     const int physicalOpticalProfile =
-        stellarPhysicalOpticalProfileFromNameV075(stellarPhysicalOpticalProfile);
+        stellarPhysicalOpticalProfileFromNameV076(stellarPhysicalOpticalProfile);
     if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
       terminate("Config: unknown stellarPhysicalChannel.");
     if (physicalScale == STELLAR_PHYSICAL_SCALE_INVALID_V071)
@@ -269,7 +275,9 @@ void ConfigSet::ReadFile(string cfgfile)
         (physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ||
          physicalOpticalProfile ==
-             STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075) &&
+             STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076) &&
         (!(stellarPhysicalTargetOpticalDepth > 0.0f) ||
          !(stellarPhysicalTargetEmission > 0.0f) ||
          stellarPhysicalReferencePathCm < 0.0f))
@@ -283,10 +291,22 @@ void ConfigSet::ReadFile(string cfgfile)
          (stellarPhysicalColorInvert != 0 && stellarPhysicalColorInvert != 1)))
       terminate("Config: invalid separated_support_v075 parameter.");
     if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
+        physicalOpticalProfile ==
+            STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 &&
+        (!(stellarPhysicalDensitySupportLog10High >
+           stellarPhysicalDensitySupportLog10Low) ||
+         stellarPhysicalEmissionSignalFloor < 0.0f ||
+         stellarPhysicalEmissionSignalFloor > 1.0f ||
+         !(stellarPhysicalColorGamma > 0.0f) ||
+         (stellarPhysicalColorInvert != 0 && stellarPhysicalColorInvert != 1)))
+      terminate("Config: invalid density_moment_v076 parameter.");
+    if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
         (physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ||
          physicalOpticalProfile ==
-             STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075) &&
+             STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076) &&
         (stellarFeatureProfile != "stellar_structures_v065" ||
          stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI))
       terminate("Config: supported physical optics requires stellar_structures_v065 and native Voronoi reconstruction.");

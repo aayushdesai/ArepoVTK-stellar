@@ -86,6 +86,9 @@ public:
   float stellarPhysicalReferencePathCm;
   float stellarPhysicalOpacitySignalThreshold, stellarPhysicalColorGamma;
   int stellarPhysicalColorInvert;
+  float stellarPhysicalDensitySupportLog10Low;
+  float stellarPhysicalDensitySupportLog10High;
+  float stellarPhysicalEmissionSignalFloor;
   
   // Animation
   vector<string> kfSet; // key frames

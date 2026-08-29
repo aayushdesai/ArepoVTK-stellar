@@ -14,6 +14,7 @@
 #include "spectrum.h"
 #include "snapio.h"
 #include "stellar_render_model_v052a.h"
+#include "stellar_physical_optical_v076.h"
 
 // Filter
 
@@ -558,10 +559,21 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
   for (int y = 0; y < yPixelCount; ++y) {
     for (int x = 0; x < xPixelCount; ++x) {
       if(Config.stellarTransferEnabled) {
+        float accumulated[3] = {
+            rgb[3 * offset], rgb[3 * offset + 1], rgb[3 * offset + 2]};
+        float linear_rgb[3];
+        const int physicalOpticalProfile =
+            stellarPhysicalChannelFromNameV072(Config.stellarPhysicalChannel) ==
+                    STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 ?
+                STELLAR_PHYSICAL_OPTICAL_LEGACY_V072 :
+                stellarPhysicalOpticalProfileFromNameV076(
+                    Config.stellarPhysicalOpticalProfile);
+        stellarDecodePhysicalMomentsV076(
+            accumulated, physicalOpticalProfile, linear_rgb);
         float mapped[3];
         for(int channel = 0; channel < 3; channel++)
           mapped[channel] = stellarFilmicMap(
-              rgb[3 * offset + channel], Config.stellarExposure,
+              linear_rgb[channel], Config.stellarExposure,
               Config.stellarBlackPoint);
         const float luma = 0.2126f * mapped[0] + 0.7152f * mapped[1] +
                            0.0722f * mapped[2];
