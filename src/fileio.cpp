@@ -6,6 +6,7 @@
 #include "fileio.h"
 #include "stellar_physical_optical_v075.h"
 #include "stellar_physical_optical_v076.h"
+#include "stellar_physical_optical_v077.h"
 #include "fileio_img.h"
 #include "stellar_physical_channel_v072.h"
 
@@ -259,7 +260,7 @@ void ConfigSet::ReadFile(string cfgfile)
     const int physicalScale =
         stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
     const int physicalOpticalProfile =
-        stellarPhysicalOpticalProfileFromNameV076(stellarPhysicalOpticalProfile);
+        stellarPhysicalOpticalProfileFromNameV077(stellarPhysicalOpticalProfile);
     if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
       terminate("Config: unknown stellarPhysicalChannel.");
     if (physicalScale == STELLAR_PHYSICAL_SCALE_INVALID_V071)
@@ -278,7 +279,9 @@ void ConfigSet::ReadFile(string cfgfile)
          physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075 ||
          physicalOpticalProfile ==
-             STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076) &&
+             STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077) &&
         (!(stellarPhysicalTargetOpticalDepth > 0.0f) ||
          !(stellarPhysicalTargetEmission > 0.0f) ||
          stellarPhysicalReferencePathCm < 0.0f))
@@ -292,22 +295,26 @@ void ConfigSet::ReadFile(string cfgfile)
          (stellarPhysicalColorInvert != 0 && stellarPhysicalColorInvert != 1)))
       terminate("Config: invalid separated_support_v075 parameter.");
     if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
-        physicalOpticalProfile ==
-            STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 &&
+        (physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077) &&
         (!(stellarPhysicalDensitySupportLog10High >
            stellarPhysicalDensitySupportLog10Low) ||
          stellarPhysicalEmissionSignalFloor < 0.0f ||
          stellarPhysicalEmissionSignalFloor > 1.0f ||
          !(stellarPhysicalColorGamma > 0.0f) ||
          (stellarPhysicalColorInvert != 0 && stellarPhysicalColorInvert != 1)))
-      terminate("Config: invalid density_moment_v076 parameter.");
+      terminate("Config: invalid density-moment optical parameter.");
     if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
         (physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ||
          physicalOpticalProfile ==
              STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075 ||
          physicalOpticalProfile ==
-             STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076) &&
+             STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076 ||
+         physicalOpticalProfile ==
+             STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077) &&
         (stellarFeatureProfile != "stellar_structures_v065" ||
          stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI))
       terminate("Config: supported physical optics requires stellar_structures_v065 and native Voronoi reconstruction.");

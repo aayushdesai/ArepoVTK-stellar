@@ -15,6 +15,7 @@
 #include "snapio.h"
 #include "stellar_render_model_v052a.h"
 #include "stellar_physical_optical_v076.h"
+#include "stellar_physical_optical_v077.h"
 
 // Filter
 
@@ -566,10 +567,16 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
             stellarPhysicalChannelFromNameV072(Config.stellarPhysicalChannel) ==
                     STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 ?
                 STELLAR_PHYSICAL_OPTICAL_LEGACY_V072 :
-                stellarPhysicalOpticalProfileFromNameV076(
+                stellarPhysicalOpticalProfileFromNameV077(
                     Config.stellarPhysicalOpticalProfile);
-        stellarDecodePhysicalMomentsV076(
-            accumulated, physicalOpticalProfile, linear_rgb);
+        StellarPhysicalOpticalParametersV076 opticalParameters = {};
+        opticalParameters.profile = physicalOpticalProfile;
+        opticalParameters.target_optical_depth =
+            Config.stellarPhysicalTargetOpticalDepth;
+        opticalParameters.target_emission =
+            Config.stellarPhysicalTargetEmission;
+        stellarDecodePhysicalMomentsV077(
+            accumulated, opticalParameters, linear_rgb);
         float mapped[3];
         for(int channel = 0; channel < 3; channel++)
           mapped[channel] = stellarFilmicMap(

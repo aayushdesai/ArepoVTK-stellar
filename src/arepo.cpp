@@ -427,7 +427,7 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
   stellarPhysicalParameters.extinction_per_cm = Config.stellarPhysicalOpacity;
   stellarPhysicalParameters.emissivity_per_cm = Config.stellarPhysicalEmission;
   stellarPhysicalOpticalParameters.profile =
-      stellarPhysicalOpticalProfileFromNameV076(
+      stellarPhysicalOpticalProfileFromNameV077(
           Config.stellarPhysicalOpticalProfile);
   stellarPhysicalOpticalParameters.target_optical_depth =
       Config.stellarPhysicalTargetOpticalDepth;
@@ -470,10 +470,13 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
           STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075;
       const bool densityMoment = stellarPhysicalOpticalParameters.profile ==
           STELLAR_PHYSICAL_OPTICAL_DENSITY_MOMENT_V076;
-      cerr << (densityMoment ? "STELLAR_PHYSICAL_OPTICAL_V076 profile=" :
+      const bool normalizedMoment = stellarPhysicalOpticalParameters.profile ==
+          STELLAR_PHYSICAL_OPTICAL_NORMALIZED_MOMENT_V077;
+      cerr << (normalizedMoment ? "STELLAR_PHYSICAL_OPTICAL_V077 profile=" :
+               (densityMoment ? "STELLAR_PHYSICAL_OPTICAL_V076 profile=" :
                (separated ? "STELLAR_PHYSICAL_OPTICAL_V075 profile=" :
-                            "STELLAR_PHYSICAL_OPTICAL_V074 profile="))
-           << stellarPhysicalOpticalProfileNameV076(
+                            "STELLAR_PHYSICAL_OPTICAL_V074 profile=")))
+           << stellarPhysicalOpticalProfileNameV077(
                   stellarPhysicalOpticalParameters.profile)
            << " target_optical_depth="
            << stellarPhysicalOpticalParameters.target_optical_depth
@@ -484,14 +487,17 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
                   stellarPhysicalParameters.channel, stellarParameters,
                   stellarPhysicalOpticalParameters.reference_path_cm)
            << " support="
-           << (densityMoment ? "density_supported_post_ray_scalar_moment" :
+           << (normalizedMoment ?
+                   "density_supported_normalized_post_ray_moments" :
+               (densityMoment ? "density_supported_post_ray_scalar_moment" :
                (separated ?
                    "feature_weighted_separate_scalar" :
                (stellarPhysicalOpticalParameters.profile ==
                    STELLAR_PHYSICAL_OPTICAL_MATERIAL_SUPPORT_V074 ?
-                   "feature_weighted" : "legacy_amplitude_floor")))
+                   "feature_weighted" : "legacy_amplitude_floor"))))
            << " zero_signal_transparent="
-           << (densityMoment || stellarPhysicalOpticalParameters.profile ==
+           << (normalizedMoment || densityMoment ||
+               stellarPhysicalOpticalParameters.profile ==
                    STELLAR_PHYSICAL_OPTICAL_LEGACY_V072 ?
                    "false" : "true");
       if(separated)
@@ -502,14 +508,17 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
              << " color_invert="
              << stellarPhysicalOpticalParameters.color_invert
              << " display_brightness=" << Config.stellarDisplayBrightness;
-      if(densityMoment)
+      if(densityMoment || normalizedMoment)
         cerr << " density_support_log10="
              << stellarPhysicalOpticalParameters.density_support_log10_low
              << ","
              << stellarPhysicalOpticalParameters.density_support_log10_high
              << " emission_signal_floor="
              << stellarPhysicalOpticalParameters.emission_signal_floor
-             << " color_aggregation=post_ray_scalar_moment"
+             << " color_aggregation="
+             << (normalizedMoment ?
+                    "post_ray_normalized_scalar_amplitude_coverage" :
+                    "post_ray_scalar_moment")
              << " color_gamma="
              << stellarPhysicalOpticalParameters.color_gamma
              << " color_invert="
@@ -1337,7 +1346,7 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
                   evaluateStellarFeatureSampleV064(
                       stellarParameters, samplePosition, vals[TF_VAL_DENS],
                       vals[TF_VAL_TEMP], stellarVelocity);
-              optical = evaluateStellarPhysicalOpticalFromValueV076(
+              optical = evaluateStellarPhysicalOpticalFromValueV077(
                   physicalValue, physical, feature, stellarPhysicalParameters,
                   stellarPhysicalOpticalParameters, stellarParameters);
             }
