@@ -6,6 +6,7 @@
 #include "sampler.h"
 #include "stellar_gpu_scene_format_v052.h"
 #include "stellar_gpu_scene_format_v073.h"
+#include "stellar_gpu_ray_depth_v080.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -112,6 +113,11 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
          << endl;
     return false;
   }
+  if(Config.stellarGpuRayTraversalLengthCm > 0.0 && !physicalV073) {
+    cerr << "STELLAR_SCENE_EXPORT_ERROR entry-relative ray traversal "
+         << "requires v073 scene format." << endl;
+    return false;
+  }
 
   vector<uint64_t> offsets;
   vector<int> cellEdges;
@@ -140,6 +146,10 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
   vector<ArepoStellarRay> rays(numRays);
   double headerCameraOrigin[3] = {0.0, 0.0, 0.0};
   uint64_t inactiveRays = 0;
+  uint64_t inactiveNoBoxIntersection = 0;
+  uint64_t inactiveDepthLimit = 0;
+  uint64_t inactiveEntryCell = 0;
+  uint64_t depthLimitedRays = 0;
   int previousEntryCell = -1;
   for(int y = 0; y < sampleHeight; y++) {
     for(int x = 0; x < sampleWidth; x++) {
@@ -167,20 +177,27 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
       double t1 = 0.0;
       if(!IntersectP(ray, &t0, &t1) || t1 <= t0) {
         inactiveRays++;
+        inactiveNoBoxIntersection++;
         continue;
       }
       ray.min_t = t0;
-      ray.max_t = t1;
-      if(Config.rayMaxT && Config.rayMaxT < ray.max_t)
-        ray.max_t = Config.rayMaxT;
-      if(ray.max_t <= ray.min_t) {
+      const StellarGpuRayDepthDecisionV080 depth =
+          stellarResolveGpuRayDepthV080(
+              t0, t1, Config.rayMaxT,
+              Config.stellarGpuRayTraversalLengthCm);
+      ray.max_t = depth.maximum_t;
+      if(depth.limited)
+        depthLimitedRays++;
+      if(!depth.valid) {
         inactiveRays++;
+        inactiveDepthLimit++;
         continue;
       }
 
       LocateEntryCell(ray, &previousEntryCell);
       if(ray.index < 0 || ray.index >= NumGas) {
         inactiveRays++;
+        inactiveEntryCell++;
         continue;
       }
 
@@ -223,13 +240,16 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
 #endif
     if(raysOnly)
       header.flags |= AREPO_STELLAR_RAYS_ONLY_V073;
+    if(Config.stellarGpuRayTraversalLengthCm > 0.0)
+      header.flags |= AREPO_STELLAR_ENTRY_RELATIVE_RAY_LIMIT_V080;
     header.num_cells = NumGas;
     header.num_edges = numEdges;
     header.num_rays = numRays;
     header.invalid_neighbor_edges = invalidEdges;
     header.inactive_rays = inactiveRays;
     header.box_size = All.BoxSize;
-    header.ray_max_t = Config.rayMaxT;
+    header.ray_max_t = Config.stellarGpuRayTraversalLengthCm > 0.0 ?
+        Config.stellarGpuRayTraversalLengthCm : Config.rayMaxT;
     for(int axis = 0; axis < 3; axis++)
       header.camera_origin[axis] = headerCameraOrigin[axis];
     header.position_unit_cm = 1.0;
@@ -305,6 +325,15 @@ bool ArepoMesh::ExportStellarGpuScene(const Camera *camera,
          << " invalid_edges=" << header.invalid_neighbor_edges
          << " rays=" << header.num_rays
          << " inactive_rays=" << header.inactive_rays
+         << " inactive_no_box_intersection=" << inactiveNoBoxIntersection
+         << " inactive_depth_limit=" << inactiveDepthLimit
+         << " inactive_entry_cell=" << inactiveEntryCell
+         << " depth_limited_rays=" << depthLimitedRays
+         << " ray_limit_mode="
+         << (Config.stellarGpuRayTraversalLengthCm > 0.0 ?
+             "entry_relative_traversal" :
+             (Config.rayMaxT > 0.0f ? "legacy_absolute" : "unlimited"))
+         << " ray_limit_value=" << header.ray_max_t
          << " rays_only=" << (raysOnly ? 1 : 0)
          << " samples_per_cell=" << header.samples_per_cell
          << " fields=magnetic_field_gauss,pressure_dyn_cm2,sound_speed_cm_per_s"

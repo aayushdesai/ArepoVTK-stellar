@@ -9,6 +9,7 @@
 #include "stellar_physical_optical_v077.h"
 #include "stellar_physical_optical_v078.h"
 #include "stellar_hero_transfer_v079.h"
+#include "stellar_gpu_ray_depth_v080.h"
 #include "fileio_img.h"
 #include "stellar_physical_channel_v072.h"
 
@@ -230,6 +231,8 @@ void ConfigSet::ReadFile(string cfgfile)
   nTreeNGB      = readValue<int>("nTreeNGB",             0); // disabled by default
   viStepSize    = readValue<float>("viStepSize",      0.0f); // disabled by default
   rayMaxT       = readValue<float>("rayMaxT",         0.0f);
+  stellarGpuRayTraversalLengthCm =
+      readValue<double>("stellarGpuRayTraversalLengthCm", 0.0);
   
   // rgb triplets input   
   splitStrArray( readValue<string>("rgbLine",     "0.1  0.1  0.1")  , &rgbLine[0]    );
@@ -400,6 +403,9 @@ void ConfigSet::ReadFile(string cfgfile)
   // render setup validation
   if (viStepSize == 0.0 && nTreeNGB)
     terminate("Config: ERROR! Need to specify viStepSize!=0 if nTreeNGB>0.");
+  if (!stellarGpuRayDepthInputsValidV080(
+          rayMaxT, stellarGpuRayTraversalLengthCm))
+    terminate("Config: rayMaxT and stellarGpuRayTraversalLengthCm must be finite, nonnegative, and mutually exclusive.");
 #if !defined(NATURAL_NEIGHBOR_IDW) && !defined(NATURAL_NEIGHBOR_SPHKERNEL)
   if (nTreeNGB)
     terminate("Config: ERROR! Must enable IDW or SPHKERNEL for nTreeNGB>0.");

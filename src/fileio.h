@@ -111,6 +111,7 @@ public:
   int nTreeNGB;
   float viStepSize;
   float rayMaxT;
+  double stellarGpuRayTraversalLengthCm;
   float rgbLine[3], rgbTetra[3], rgbVoronoi[3];
   float rgbAbsorb[3];
 
