@@ -447,6 +447,16 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
       Config.stellarPhysicalDensitySupportLog10High;
   stellarPhysicalOpticalParameters.emission_signal_floor =
       Config.stellarPhysicalEmissionSignalFloor;
+  stellarRenderProgram = stellarRenderProgramFromNameV079(
+      Config.stellarRenderProgram);
+  stellarHeroCalibration.material_column_reference_g_cm2 =
+      Config.stellarHeroMaterialColumnReference;
+  stellarHeroCalibration.material_optical_depth_at_reference =
+      Config.stellarHeroMaterialOpticalDepth;
+  stellarHeroCalibration.outflow_column_flux_reference_g_cm_s =
+      Config.stellarHeroOutflowColumnFluxReference;
+  stellarHeroCalibration.outflow_emission_at_reference =
+      Config.stellarHeroOutflowEmission;
 
   if(ThisTask == 0 && Config.stellarTransferEnabled) {
     if(stellarPhysicalParameters.channel !=
@@ -464,8 +474,29 @@ ArepoMesh::ArepoMesh(const TransferFunction *tf)
            << " emission=" << Config.stellarPhysicalEmission
            << " palette=copper_blue"
            << " traversal=native_voronoi" << endl;
+    if(stellarRenderProgram ==
+       STELLAR_RENDER_PROGRAM_HERO_MATERIAL_OUTFLOW_V079) {
+      cerr << "STELLAR_HERO_TRANSFER_V079 program="
+           << stellarRenderProgramNameV079(stellarRenderProgram)
+           << " material_column_reference_g_cm2="
+           << stellarHeroCalibration.material_column_reference_g_cm2
+           << " material_optical_depth_at_reference="
+           << stellarHeroCalibration.material_optical_depth_at_reference
+           << " outflow_column_flux_reference_g_cm_s="
+           << stellarHeroCalibration.outflow_column_flux_reference_g_cm_s
+           << " outflow_emission_at_reference="
+           << stellarHeroCalibration.outflow_emission_at_reference
+           << " calibration_sha256="
+           << Config.stellarHeroCalibrationSHA256
+           << " extinction=mass_column"
+           << " emission=material_source_plus_outward_mass_flux"
+           << " static_structure_weights=false"
+           << " palette=copper_blue"
+           << " traversal=native_voronoi" << endl;
+    }
     if(stellarPhysicalParameters.channel !=
-       STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071) {
+           STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
+       stellarRenderProgram == STELLAR_RENDER_PROGRAM_RETAINED_V078) {
       const bool separated = stellarPhysicalOpticalParameters.profile ==
           STELLAR_PHYSICAL_OPTICAL_SEPARATED_SUPPORT_V075;
       const bool densityMoment = stellarPhysicalOpticalParameters.profile ==
@@ -1313,8 +1344,19 @@ bool ArepoMesh::AdvanceRayOneCellNew(const Ray &ray, double *t0, double *t1,
         if(Config.stellarTransferEnabled) {
           const double samplePosition[3] = {samplept.x, samplept.y, samplept.z};
           StellarOpticalSample optical;
-          if(stellarPhysicalParameters.channel ==
-             STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071) {
+          if(stellarRenderProgram ==
+             STELLAR_RENDER_PROGRAM_HERO_MATERIAL_OUTFLOW_V079) {
+            const StellarPhysicalSampleV071 physical =
+                evaluateStellarPhysicalSampleV071(
+                    stellarParameters, samplePosition, vals[TF_VAL_DENS],
+                    vals[TF_VAL_TEMP], stellarVelocity,
+                    vals[TF_VAL_ENTROPY], vals[TF_VAL_BMAG]);
+            optical = evaluateStellarHeroMaterialOutflowV079(
+                physical, stellarPhysicalParameters,
+                stellarPhysicalOpticalParameters,
+                stellarHeroCalibration);
+          } else if(stellarPhysicalParameters.channel ==
+                    STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071) {
             optical = evaluateStellarOpticalSample(
                 stellarParameters, samplePosition, vals[TF_VAL_DENS],
                 vals[TF_VAL_TEMP], stellarVelocity);

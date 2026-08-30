@@ -8,6 +8,7 @@
 #include "stellar_physical_optical_v076.h"
 #include "stellar_physical_optical_v077.h"
 #include "stellar_physical_optical_v078.h"
+#include "stellar_hero_transfer_v079.h"
 #include "fileio_img.h"
 #include "stellar_physical_channel_v072.h"
 
@@ -132,6 +133,10 @@ void ConfigSet::ReadFile(string cfgfile)
       readValue<string>("stellarPhysicalScale", "linear");
   stellarPhysicalOpticalProfile =
       readValue<string>("stellarPhysicalOpticalProfile", "legacy_v072");
+  stellarRenderProgram =
+      readValue<string>("stellarRenderProgram", "retained_v078");
+  stellarHeroCalibrationSHA256 =
+      readValue<string>("stellarHeroCalibrationSHA256", "");
   const string stellarReconstruction =
       readValue<string>("stellarReconstruction", "sph");
   if (stellarReconstruction == "sph")
@@ -197,6 +202,14 @@ void ConfigSet::ReadFile(string cfgfile)
       readValue<float>("stellarPhysicalDensitySupportLog10High", -5.0f);
   stellarPhysicalEmissionSignalFloor =
       readValue<float>("stellarPhysicalEmissionSignalFloor", 0.25f);
+  stellarHeroMaterialColumnReference =
+      readValue<float>("stellarHeroMaterialColumnReference", 1.0f);
+  stellarHeroMaterialOpticalDepth =
+      readValue<float>("stellarHeroMaterialOpticalDepth", 1.0f);
+  stellarHeroOutflowColumnFluxReference =
+      readValue<float>("stellarHeroOutflowColumnFluxReference", 1.0f);
+  stellarHeroOutflowEmission =
+      readValue<float>("stellarHeroOutflowEmission", 1.0f);
 
   // Animation
   startFrame    = readValue<int>("startFrame",     0);  
@@ -262,12 +275,43 @@ void ConfigSet::ReadFile(string cfgfile)
         stellarPhysicalScaleFromNameV071(stellarPhysicalScale);
     const int physicalOpticalProfile =
         stellarPhysicalOpticalProfileFromNameV078(stellarPhysicalOpticalProfile);
+    const int renderProgram =
+        stellarRenderProgramFromNameV079(stellarRenderProgram);
     if (physicalChannel == STELLAR_PHYSICAL_CHANNEL_INVALID_V071)
       terminate("Config: unknown stellarPhysicalChannel.");
     if (physicalScale == STELLAR_PHYSICAL_SCALE_INVALID_V071)
       terminate("Config: unknown stellarPhysicalScale.");
     if (physicalOpticalProfile == STELLAR_PHYSICAL_OPTICAL_INVALID_V074)
       terminate("Config: unknown stellarPhysicalOpticalProfile.");
+    if (renderProgram == STELLAR_RENDER_PROGRAM_INVALID_V079)
+      terminate("Config: unknown stellarRenderProgram.");
+    if (renderProgram ==
+            STELLAR_RENDER_PROGRAM_HERO_MATERIAL_OUTFLOW_V079 &&
+        (physicalChannel !=
+             STELLAR_PHYSICAL_CHANNEL_ROTATIONAL_FRACTION_V071 ||
+         stellarPhysicalScale != "linear" ||
+         stellarPhysicalRangeMin < 0.0f ||
+         !(stellarPhysicalRangeMax > stellarPhysicalRangeMin) ||
+         stellarPhysicalRangeMax > 1.0f ||
+         stellarPaletteProfile != "copper_blue_accent_v058" ||
+         stellarTransferMode != "composite" ||
+         stellarReconstructionMode != STELLAR_RECONSTRUCTION_VORONOI))
+      terminate("Config: hero_material_outflow_v079 requires composite native Voronoi, copper_blue_accent_v058, and a rotational_fraction linear subrange within [0,1].");
+    if (renderProgram ==
+            STELLAR_RENDER_PROGRAM_HERO_MATERIAL_OUTFLOW_V079) {
+      StellarHeroCalibrationV079 hero = {};
+      hero.material_column_reference_g_cm2 =
+          stellarHeroMaterialColumnReference;
+      hero.material_optical_depth_at_reference =
+          stellarHeroMaterialOpticalDepth;
+      hero.outflow_column_flux_reference_g_cm_s =
+          stellarHeroOutflowColumnFluxReference;
+      hero.outflow_emission_at_reference = stellarHeroOutflowEmission;
+      if (!stellarHeroCalibrationValidV079(hero) ||
+          !stellarHeroCalibrationSha256ValidV079(
+              stellarHeroCalibrationSHA256))
+        terminate("Config: invalid or unbound hero v079 calibration.");
+    }
     if (physicalChannel != STELLAR_PHYSICAL_CHANNEL_OPTICAL_V071 &&
         (!(stellarPhysicalRangeMax > stellarPhysicalRangeMin) ||
          !(stellarPhysicalSymlogLinthresh > 0.0f) ||

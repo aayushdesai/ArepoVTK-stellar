@@ -17,6 +17,7 @@
 #include "stellar_physical_optical_v076.h"
 #include "stellar_physical_optical_v077.h"
 #include "stellar_physical_optical_v078.h"
+#include "stellar_hero_transfer_v079.h"
 
 // Filter
 
@@ -576,7 +577,8 @@ IF_DEBUG(cout << "Film:WriteImage(" << frameNum << "," << splatScale << ") nx = 
             Config.stellarPhysicalTargetOpticalDepth;
         opticalParameters.target_emission =
             Config.stellarPhysicalTargetEmission;
-        stellarDecodePhysicalMomentsV078(
+        stellarDecodeRenderProgramV079(
+            stellarRenderProgramFromNameV079(Config.stellarRenderProgram),
             accumulated, opticalParameters, linear_rgb);
         float mapped[3];
         for(int channel = 0; channel < 3; channel++)

@@ -16,6 +16,7 @@
 #include "stellar_physical_optical_v076.h"
 #include "stellar_physical_optical_v077.h"
 #include "stellar_physical_optical_v078.h"
+#include "stellar_hero_transfer_v079.h"
 #include "stellar_reconstruction_v053.h"
 #include "voronoi_3db.h"
 
@@ -134,6 +135,8 @@ private:
   StellarTransferParameters stellarParameters;
   StellarPhysicalTransferV071 stellarPhysicalParameters;
   StellarPhysicalOpticalParametersV076 stellarPhysicalOpticalParameters;
+  int stellarRenderProgram;
+  StellarHeroCalibrationV079 stellarHeroCalibration;
   
   // units, etc
   float unitConversions[TF_NUM_VALS]; // mult factor from code units to ArepoVTK "units"

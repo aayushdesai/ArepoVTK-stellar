@@ -69,6 +69,8 @@ public:
   string stellarFeatureProfile;
   string stellarPhysicalChannel, stellarPhysicalScale;
   string stellarPhysicalOpticalProfile;
+  string stellarRenderProgram;
+  string stellarHeroCalibrationSHA256;
   int stellarReconstructionMode;
   float stellarIdwPower, stellarSphSupportFactor;
   float stellarCenter[3], stellarAxis[3];
@@ -89,6 +91,10 @@ public:
   float stellarPhysicalDensitySupportLog10Low;
   float stellarPhysicalDensitySupportLog10High;
   float stellarPhysicalEmissionSignalFloor;
+  float stellarHeroMaterialColumnReference;
+  float stellarHeroMaterialOpticalDepth;
+  float stellarHeroOutflowColumnFluxReference;
+  float stellarHeroOutflowEmission;
   
   // Animation
   vector<string> kfSet; // key frames
