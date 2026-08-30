@@ -16,11 +16,21 @@ struct StellarGpuRayDepthDecisionV080 {
 };
 
 STELLAR_GPU_RAY_DEPTH_V080_HD inline bool
+stellarGpuRayDepthFiniteV080(double value)
+{
+#ifdef __CUDA_ARCH__
+  return isfinite(value);
+#else
+  return std::isfinite(value);
+#endif
+}
+
+STELLAR_GPU_RAY_DEPTH_V080_HD inline bool
 stellarGpuRayDepthInputsValidV080(double legacy_absolute_maximum_t,
                                   double traversal_length_cm)
 {
-  return isfinite(legacy_absolute_maximum_t) &&
-      isfinite(traversal_length_cm) &&
+  return stellarGpuRayDepthFiniteV080(legacy_absolute_maximum_t) &&
+      stellarGpuRayDepthFiniteV080(traversal_length_cm) &&
       legacy_absolute_maximum_t >= 0.0 && traversal_length_cm >= 0.0 &&
       !(legacy_absolute_maximum_t > 0.0 && traversal_length_cm > 0.0);
 }
@@ -36,7 +46,8 @@ stellarResolveGpuRayDepthV080(double entry_t, double box_exit_t,
   StellarGpuRayDepthDecisionV080 output = {box_exit_t, 0, 0};
   if(!stellarGpuRayDepthInputsValidV080(
          legacy_absolute_maximum_t, traversal_length_cm) ||
-     !isfinite(entry_t) || !isfinite(box_exit_t) ||
+     !stellarGpuRayDepthFiniteV080(entry_t) ||
+     !stellarGpuRayDepthFiniteV080(box_exit_t) ||
      !(box_exit_t > entry_t))
     return output;
 
